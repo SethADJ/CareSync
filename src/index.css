@@ -1,0 +1,198 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 199 89% 38%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 92%;
+    --secondary-foreground: 222 47% 18%;
+
+    --muted: 220 14% 95%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 168 76% 36%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 88%;
+    --input: 220 13% 88%;
+    --ring: 199 89% 38%;
+
+    --radius: 0.875rem;
+
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 213 31% 91%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent-foreground: 213 31% 91%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 199 89% 48%;
+
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+    --warning: 43 96% 56%;
+    --warning-foreground: 0 0% 0%;
+    --due: 43 96% 56%;
+    --overdue: 0 84% 60%;
+
+    --surface-elevated: 0 0% 100%;
+    --glow-primary: 199 89% 48%;
+  }
+
+  .dark {
+    --background: 222 47% 7%;
+    --foreground: 213 31% 91%;
+    --card: 222 47% 10%;
+    --card-foreground: 213 31% 91%;
+    --popover: 222 47% 10%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 213 31% 85%;
+    --muted: 217 33% 15%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 168 70% 42%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 199 89% 48%;
+    --sidebar-background: 222 47% 7%;
+    --sidebar-foreground: 213 31% 85%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 33% 14%;
+    --sidebar-accent-foreground: 213 31% 85%;
+    --sidebar-border: 217 33% 14%;
+    --sidebar-ring: 199 89% 48%;
+    --success: 160 70% 42%;
+    --warning: 43 90% 56%;
+    --due: 43 90% 56%;
+    --overdue: 0 72% 50%;
+    --surface-elevated: 222 47% 12%;
+    --glow-primary: 199 89% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+}
+
+@layer components {
+  .bg-texture {
+    background-image: radial-gradient(circle, hsl(var(--foreground) / 0.04) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .bg-grain::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
+  }
+
+  .dark .bg-grain::before {
+    opacity: 0.05;
+  }
+
+  .glass-card {
+    @apply rounded-xl border bg-card/80 backdrop-blur-sm shadow-sm;
+  }
+
+  /* Program-specific sidebar colors */
+  .sidebar-hivcare {
+    --sidebar-background: 348 83% 20%;
+    --sidebar-accent: 348 75% 28%;
+    --sidebar-border: 348 70% 25%;
+    --sidebar-primary-foreground: 348 83% 20%;
+  }
+
+  /* Sidebar texture overlay */
+  [data-sidebar] > div {
+    position: relative;
+  }
+  [data-sidebar]::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.06;
+    background-image:
+      radial-gradient(circle at 20% 50%, hsl(var(--sidebar-primary) / 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, hsl(var(--sidebar-primary) / 0.2) 0%, transparent 40%),
+      url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  [data-sidebar] > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .status-badge-due {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+    background-color: hsl(var(--due) / 0.15);
+    color: hsl(var(--due));
+  }
+  .status-badge-overdue {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+    background-color: hsl(var(--overdue) / 0.15);
+    color: hsl(var(--overdue));
+  }
+  .status-badge-ok {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+    background-color: hsl(var(--success) / 0.15);
+    color: hsl(var(--success));
+  }
+  .program-card {
+    @apply rounded-xl border bg-card p-4 shadow-sm transition-all hover:shadow-md;
+  }
+
+  @keyframes pulse-warning {
+    0%, 100% { box-shadow: 0 0 0 0 hsl(var(--warning) / 0.4); }
+    50% { box-shadow: 0 0 12px 4px hsl(var(--warning) / 0.25); }
+  }
+  @keyframes pulse-destructive {
+    0%, 100% { box-shadow: 0 0 0 0 hsl(var(--destructive) / 0.4); }
+    50% { box-shadow: 0 0 12px 4px hsl(var(--destructive) / 0.25); }
+  }
+  .card-pulse-warning {
+    animation: pulse-warning 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    border-color: hsl(var(--warning) / 0.5);
+  }
+  .card-pulse-destructive {
+    animation: pulse-destructive 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    border-color: hsl(var(--destructive) / 0.5);
+  }
+
+  .glow-primary {
+    box-shadow: 0 0 20px -5px hsl(var(--glow-primary) / 0.3);
+  }
+}
