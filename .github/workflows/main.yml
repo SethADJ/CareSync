@@ -1,0 +1,29 @@
+name: Build CareSync APK
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install & Build
+        run: |
+          npm install
+          npm run build
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      - name: Build APK
+        run: |
+          npx cap sync
+          cd android && chmod +x gradlew && ./gradlew assembleDebug
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CareSync-Build
+          path: android/app/build/outputs/apk/debug/app-debug.apk
