@@ -24,7 +24,7 @@ import {
 
 const programMap: Record<string, { title: string; url: string; colorClass: string; bgClass: string; locked: boolean }> = {
   tbcare: { title: "TBCare", url: "/tbcare", colorClass: "text-primary", bgClass: "bg-primary", locked: false },
-  hivcare: { title: "HIVCare", url: "/hivcare", colorClass: "text-destructive", bgClass: "bg-destructive", locked: false },
+  hivcare: { title: "HIVCare", url: "/hivcare", colorClass: "text-destructive", bgClass: "bg-destructive", locked: true },
   epi: { title: "EPI", url: "/epi", colorClass: "text-blue-600", bgClass: "bg-blue-600", locked: true },
   anc: { title: "ANC", url: "/anc", colorClass: "text-green-600", bgClass: "bg-green-600", locked: true },
 };
@@ -234,25 +234,26 @@ export function AppSidebar() {
 
       {/* Under Development Dialog */}
       <Dialog open={showDevDialog} onOpenChange={setShowDevDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader className="text-center items-center">
+        <DialogContent className="sm:max-w-md border-0 bg-white shadow-lg">
+          <div className="flex flex-col items-center justify-center text-center py-8 px-6">
             <motion.div
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 150, damping: 12 }}
-              className="h-16 w-16 rounded-2xl bg-warning/10 flex items-center justify-center mb-2"
+              className="h-20 w-20 rounded-2xl bg-yellow-100 flex items-center justify-center mb-6"
             >
-              <Construction className="h-8 w-8 text-warning" />
+              <Construction className="h-10 w-10 text-yellow-500" />
             </motion.div>
-            <DialogTitle className="text-xl">Under Development</DialogTitle>
-            <DialogDescription className="text-center">
-              <span className="font-semibold text-foreground">{selectedLocked}</span> module is currently under development and will be available in a future update. Stay tuned!
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-center pt-2">
-            <Button onClick={() => setShowDevDialog(false)} variant="outline">
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Development</h2>
+            <p className="text-base text-gray-700 mb-8">
+              <span className="font-semibold">{selectedLocked}</span> module is currently under development and will be available in a future update. Stay tuned!
+            </p>
+            <button
+              onClick={() => setShowDevDialog(false)}
+              className="px-8 py-2 bg-gray-200 text-gray-800 font-medium rounded-lg hover:bg-gray-300 transition-colors"
+            >
               Got it
-            </Button>
+            </button>
           </div>
         </DialogContent>
       </Dialog>

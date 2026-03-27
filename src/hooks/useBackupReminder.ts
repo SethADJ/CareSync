@@ -2,8 +2,7 @@ import { useEffect } from 'react';
 import { toast } from 'sonner';
 
 const LAST_BACKUP_KEY = 'caresync_last_backup';
-const REMINDER_DISMISSED_KEY = 'caresync_backup_reminder_dismissed';
-const REMINDER_INTERVAL_DAYS = 14;
+const REMINDER_SHOWN_KEY = 'caresync_backup_reminder_shown';
 
 export function getLastBackupDate(): string | null {
   return localStorage.getItem(LAST_BACKUP_KEY);
@@ -15,26 +14,27 @@ export function setLastBackupDate(date?: string) {
 
 export function useBackupReminder() {
   useEffect(() => {
-    const lastBackup = localStorage.getItem(LAST_BACKUP_KEY);
-    const dismissed = localStorage.getItem(REMINDER_DISMISSED_KEY);
+    const checkAndShowReminder = () => {
+      const now = new Date();
+      const isMonday = now.getDay() === 1; // 1 = Monday
+      const hour = now.getHours();
+      const isEightAM = hour === 8; // 8:00 AM
+      
+      // Check if reminder was already shown today
+      const reminderShownToday = localStorage.getItem(REMINDER_SHOWN_KEY);
+      if (reminderShownToday) {
+        const lastShownDate = new Date(reminderShownToday);
+        const isSameDay = 
+          lastShownDate.getDate() === now.getDate() &&
+          lastShownDate.getMonth() === now.getMonth() &&
+          lastShownDate.getFullYear() === now.getFullYear();
+        
+        if (isSameDay) return; // Already shown today
+      }
 
-    // Check if reminder was dismissed recently (within 1 day)
-    if (dismissed) {
-      const dismissedAt = new Date(dismissed);
-      const hoursSince = (Date.now() - dismissedAt.getTime()) / (1000 * 60 * 60);
-      if (hoursSince < 24) return;
-    }
-
-    const shouldRemind = () => {
-      if (!lastBackup) return true; // Never backed up
-      const last = new Date(lastBackup);
-      const daysSince = (Date.now() - last.getTime()) / (1000 * 60 * 60 * 24);
-      return daysSince >= REMINDER_INTERVAL_DAYS;
-    };
-
-    if (shouldRemind()) {
-      // Small delay so it doesn't fire during initial render
-      const timer = setTimeout(() => {
+      // Only show on Monday at 8:00 AM
+      if (isMonday && isEightAM) {
+        const lastBackup = localStorage.getItem(LAST_BACKUP_KEY);
         const daysSince = lastBackup
           ? Math.floor((Date.now() - new Date(lastBackup).getTime()) / (1000 * 60 * 60 * 24))
           : null;
@@ -52,13 +52,22 @@ export function useBackupReminder() {
               },
             },
             onDismiss: () => {
-              localStorage.setItem(REMINDER_DISMISSED_KEY, new Date().toISOString());
+              localStorage.setItem(REMINDER_SHOWN_KEY, new Date().toISOString());
             },
           }
         );
-      }, 3000);
 
-      return () => clearTimeout(timer);
-    }
+        // Mark reminder as shown
+        localStorage.setItem(REMINDER_SHOWN_KEY, new Date().toISOString());
+      }
+    };
+
+    // Check immediately
+    checkAndShowReminder();
+
+    // Check every minute to catch the 8:00 AM time
+    const interval = setInterval(checkAndShowReminder, 60 * 1000);
+
+    return () => clearInterval(interval);
   }, []);
 }

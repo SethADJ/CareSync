@@ -9,12 +9,16 @@ import { Button } from '@/components/ui/button';
 import { getUserProfile } from '@/pages/SignupPage';
 import { getStoredAvatar, getAvatarIcon } from '@/utils/avatar';
 import { ProgramIcon } from '@/components/ProgramIcon';
+import tbBg from '@/assets/TB.jpg';
+import hivBg from '@/assets/HIV.jpg';
+import epiBg from '@/assets/EPI.jpg';
+import ancBg from '@/assets/ANC.jpg';
 
 const programs = [
   { key: 'tbcare', label: 'TBCare', description: 'TB treatment tracking & DOTS cycle monitoring', gradient: 'from-primary to-primary/60', locked: false },
-  { key: 'hivcare', label: 'HIVCare', description: 'ART adherence & viral load follow-up', gradient: 'from-destructive to-destructive/60', locked: false },
-  { key: 'epi', label: 'EPI', description: 'Expanded Programme on Immunization', gradient: 'from-green-500 to-green-400', locked: true },
-  { key: 'anc', label: 'ANC', description: 'Antenatal Care monitoring', gradient: 'from-purple-500 to-purple-400', locked: true },
+  { key: 'hivcare', label: 'HIVCare', description: 'ART adherence & viral load follow-up', gradient: 'from-red-600 to-red-500', locked: true },
+  { key: 'epi', label: 'EPI', description: 'Expanded Programme on Immunization', gradient: 'from-green-600 to-green-500', locked: true },
+  { key: 'anc', label: 'ANC', description: 'Antenatal Care monitoring', gradient: 'from-orange-600 to-orange-500', locked: true },
 ];
 
 const containerVariants = {
@@ -119,33 +123,49 @@ export default function WelcomePage() {
           {programs.map((prog) => (
             <motion.div key={prog.key} variants={itemVariants}>
               <Card
-                className={`group cursor-pointer border border-border/50 transition-all duration-300 bg-card/80 backdrop-blur-sm relative
+                className={`group cursor-pointer border border-border/50 transition-all duration-300 relative
+                  ${(['tbcare', 'hivcare', 'epi', 'anc'].includes(prog.key))
+                    ? 'bg-cover bg-center'
+                    : 'bg-card/80 backdrop-blur-sm'
+                  }
                   ${prog.locked
                     ? 'hover:border-muted-foreground/30 hover:shadow-lg opacity-80'
                     : 'hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5'
                   }`}
+                style={(['tbcare', 'hivcare', 'epi', 'anc'].includes(prog.key)) ? { backgroundImage: `url(${prog.key === 'tbcare' ? tbBg : prog.key === 'hivcare' ? hivBg : prog.key === 'epi' ? epiBg : ancBg})`, minHeight: '160px' } : {}}
                 onClick={() => handleProgramClick(prog)}
               >
-                <CardContent className="p-5 flex items-center gap-4">
-                  <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br ${prog.gradient} shadow-md relative p-2`}>
-                    <ProgramIcon
-                      program={prog.key}
-                      className="h-8 w-8 brightness-0 invert"
-                    />
-                    {prog.locked && (
-                      <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-muted-foreground flex items-center justify-center">
-                        <Lock className="h-2.5 w-2.5 text-background" />
-                      </div>
+                {(['tbcare', 'hivcare', 'epi', 'anc'].includes(prog.key)) && (
+                  <div className="absolute inset-0 bg-black/50 rounded-lg" />
+                )}
+                <CardContent className={`relative z-10 ${(['tbcare', 'hivcare', 'epi', 'anc'].includes(prog.key)) ? 'p-4 flex flex-col justify-center' : 'p-5 flex items-center gap-4'}`}>
+                  <div className={`${(['tbcare', 'hivcare', 'epi', 'anc'].includes(prog.key)) ? 'hidden' : 'h-12 w-12 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br ' + prog.gradient + ' shadow-lg relative p-0 overflow-hidden'}`}>
+                    {!['tbcare', 'hivcare', 'epi', 'anc'].includes(prog.key) && (
+                      <>
+                        <ProgramIcon
+                          program={prog.key}
+                          className="h-12 w-12"
+                        />
+                        {prog.locked && (
+                          <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-muted-foreground flex items-center justify-center">
+                            <Lock className="h-2.5 w-2.5 text-background" />
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-foreground text-sm">{prog.label}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{prog.description}</p>
+                  <div className={`${(['tbcare', 'hivcare', 'epi', 'anc'].includes(prog.key)) ? 'w-full' : 'flex-1'} min-w-0`}>
+                    <p className={`font-bold ${(['tbcare', 'hivcare', 'epi', 'anc'].includes(prog.key)) ? 'text-2xl text-white' : 'text-sm text-foreground'}`}>{prog.label}</p>
+                    <p className={`mt-0.5 leading-snug ${(['tbcare', 'hivcare', 'epi', 'anc'].includes(prog.key)) ? 'text-base text-white' : 'text-xs text-muted-foreground'}`}>{prog.description}</p>
                   </div>
-                  {prog.locked ? (
-                    <Lock className="h-4 w-4 text-muted-foreground/40 shrink-0" />
-                  ) : (
-                    <ArrowRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all duration-200 shrink-0" />
+                  {!['tbcare', 'hivcare', 'epi', 'anc'].includes(prog.key) && (
+                    <>
+                      {prog.locked ? (
+                        <Lock className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                      ) : (
+                        <ArrowRight className="h-4 w-4 shrink-0 transition-all duration-200 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1" />
+                      )}
+                    </>
                   )}
                 </CardContent>
               </Card>

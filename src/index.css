@@ -195,4 +195,18 @@
   .glow-primary {
     box-shadow: 0 0 20px -5px hsl(var(--glow-primary) / 0.3);
   }
+
+  /* Rotating logo animation for notifications */
+  @keyframes rotate-logo {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-rotate-logo {
+    animation: rotate-logo 3s linear infinite;
+  }
 }

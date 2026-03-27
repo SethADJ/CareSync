@@ -5,8 +5,12 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bell, Clock, Shield, Heart, Save, CalendarDays } from 'lucide-react';
+import { Bell, Clock, Save, CalendarDays, Lock, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { ProgramIcon } from '@/components/ProgramIcon';
+import { usePatients } from '@/hooks/usePatients';
+import { db, type Patient, type ProgramType } from '@/db/database';
+import { startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, parseISO, isWithinInterval, isSameDay } from 'date-fns';
 
 type Frequency = 'daily' | 'weekly';
 type ReminderType = 'dueToday' | 'dueTomorrow' | 'dueThisWeek';
@@ -22,18 +26,24 @@ interface ProgramReminder {
 interface ReminderSettings {
   tbcare: ProgramReminder;
   hivcare: ProgramReminder;
+  epi: ProgramReminder;
+  anc: ProgramReminder;
 }
 
 const STORAGE_KEY = 'caresync_reminders';
 
 const defaultSettings: ReminderSettings = {
-  tbcare: { enabled: false, frequency: 'daily', time: '08:00', reminderTypes: ['dueToday', 'dueTomorrow', 'dueThisWeek'] },
-  hivcare: { enabled: false, frequency: 'daily', time: '08:00', reminderTypes: ['dueToday'] },
+  tbcare: { enabled: false, frequency: 'daily', time: '08:00', dayOfWeek: 1, reminderTypes: ['dueToday', 'dueTomorrow', 'dueThisWeek'] },
+  hivcare: { enabled: false, frequency: 'daily', time: '08:00', dayOfWeek: 1, reminderTypes: ['dueToday'] },
+  epi: { enabled: false, frequency: 'daily', time: '08:00', dayOfWeek: 1, reminderTypes: ['dueToday', 'dueTomorrow', 'dueThisWeek'] },
+  anc: { enabled: false, frequency: 'daily', time: '08:00', dayOfWeek: 1, reminderTypes: ['dueToday', 'dueTomorrow', 'dueThisWeek'] },
 };
 
 const programMeta = {
-  tbcare: { label: 'TBCare', icon: Shield, colorClass: 'bg-primary' },
-  hivcare: { label: 'HIVCare', icon: Heart, colorClass: 'bg-destructive' },
+  tbcare: { label: 'TBCare', locked: false },
+  hivcare: { label: 'HIVCare', locked: true },
+  epi: { label: 'EPI', locked: true },
+  anc: { label: 'ANC', locked: true },
 };
 
 const REMINDER_TYPE_OPTIONS: { value: ReminderType; label: string; description: string }[] = [
@@ -44,6 +54,37 @@ const REMINDER_TYPE_OPTIONS: { value: ReminderType; label: string; description: 
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+function countPatientsByReminderType(patients: Patient[], type: ReminderType): number {
+  const now = new Date();
+  const today = startOfDay(now);
+  const tomorrow = startOfDay(addDays(now, 1));
+  const weekStart = startOfWeek(now, { weekStartsOn: 0 });
+  const weekEnd = endOfWeek(now, { weekStartsOn: 0 });
+
+  return patients.filter(p => {
+    const nextDueStr = p.nextDueDate;
+    if (!nextDueStr) return false;
+    
+    try {
+      const dueDate = parseISO(nextDueStr);
+      const dueDateStart = startOfDay(dueDate);
+
+      switch (type) {
+        case 'dueToday':
+          return isSameDay(dueDateStart, today);
+        case 'dueTomorrow':
+          return isSameDay(dueDateStart, tomorrow);
+        case 'dueThisWeek':
+          return isWithinInterval(dueDateStart, { start: weekStart, end: weekEnd });
+        default:
+          return false;
+      }
+    } catch {
+      return false;
+    }
+  }).length;
+}
+
 function loadSettings(): ReminderSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -52,6 +93,8 @@ function loadSettings(): ReminderSettings {
     return {
       tbcare: { ...defaultSettings.tbcare, ...parsed.tbcare },
       hivcare: { ...defaultSettings.hivcare, ...parsed.hivcare },
+      epi: { ...defaultSettings.epi, ...parsed.epi },
+      anc: { ...defaultSettings.anc, ...parsed.anc },
     };
   } catch { return defaultSettings; }
 }
@@ -87,15 +130,50 @@ function scheduleReminders(settings: ReminderSettings) {
     const msUntilNext = next.getTime() - now.getTime();
     const meta = programMeta[program as keyof typeof programMeta];
     const types = config.reminderTypes || ['dueToday'];
-    const typeLabels = types.map(t => REMINDER_TYPE_OPTIONS.find(o => o.value === t)?.label || t).join(', ');
 
     const timerId = window.setTimeout(() => {
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(`${meta.label} Reminder`, {
-          body: `Check your ${meta.label} patients: ${typeLabels}. Open CareSync to review.`,
-          icon: '/favicon.ico',
+        // Get actual patient counts
+        const patients = db.getPatients(program as ProgramType);
+        const patientCounts = {
+          dueToday: countPatientsByReminderType(patients, 'dueToday'),
+          dueTomorrow: countPatientsByReminderType(patients, 'dueTomorrow'),
+          dueThisWeek: countPatientsByReminderType(patients, 'dueThisWeek'),
+        };
+
+        // Build message with actual counts
+        const messages: Record<ReminderType, string> = {
+          dueToday: `${patientCounts.dueToday} patient${patientCounts.dueToday !== 1 ? 's' : ''} due for refill today`,
+          dueTomorrow: `${patientCounts.dueTomorrow} patient${patientCounts.dueTomorrow !== 1 ? 's' : ''} due tomorrow`,
+          dueThisWeek: `${patientCounts.dueThisWeek} patient${patientCounts.dueThisWeek !== 1 ? 's' : ''} due this week`,
+        };
+        
+        const enabledMessages = types
+          .filter(t => patientCounts[t] > 0)
+          .map(t => messages[t]);
+        
+        const notificationBody = enabledMessages.length > 0 
+          ? enabledMessages.join(' • ') 
+          : `No patients due for refill in your selected categories.`;
+
+        const notification = new Notification(`${meta.label} Appointment Reminder`, {
+          body: notificationBody,
+          icon: '/logo.png',
+          badge: '/logo.png',
           tag: `caresync-${program}`,
+          requireInteraction: false,
         });
+
+        // Handle notification click - navigate to program page with filter
+        notification.onclick = () => {
+          window.focus();
+          const baseUrl = `/${program}`;
+          // Determine which filter to show based on first enabled type with patients
+          const filterType = types.find(t => patientCounts[t] > 0);
+          const url = filterType ? `${baseUrl}?filter=${filterType}` : baseUrl;
+          window.location.href = url;
+          notification.close();
+        };
       }
       scheduleReminders(settings);
     }, msUntilNext);
@@ -112,6 +190,19 @@ export default function ReminderPage() {
     'Notification' in window && Notification.permission === 'granted'
   );
   const notificationSupported = 'Notification' in window;
+  
+  // Fetch patients for all programs
+  const tbPatients = usePatients('tbcare').patients;
+  const hivPatients = usePatients('hivcare').patients;
+  const epiPatients = usePatients('epi').patients;
+  const ancPatients = usePatients('anc').patients;
+  
+  const patientsByProgram: Record<keyof ReminderSettings, Patient[]> = {
+    tbcare: tbPatients,
+    hivcare: hivPatients,
+    epi: epiPatients,
+    anc: ancPatients,
+  };
 
   useEffect(() => {
     if (!notificationSupported) {
@@ -136,14 +227,59 @@ export default function ReminderPage() {
       return;
     }
 
-    const meta = programMeta[program];
-    new Notification(`${meta.label} Reminder (Test)`, {
-      body: `This is a test reminder for ${meta.label}.`,
-      icon: '/favicon.ico',
-      tag: `caresync-test-${program}`,
-    });
-
-    toast.success('Test reminder sent.');
+    try {
+      const meta = programMeta[program];
+      const config = settings[program];
+      const types = config.reminderTypes || ['dueToday'];
+      const programPatients = patientsByProgram[program];
+      
+      // Calculate actual patient counts
+      const patientCounts = {
+        dueToday: countPatientsByReminderType(programPatients, 'dueToday'),
+        dueTomorrow: countPatientsByReminderType(programPatients, 'dueTomorrow'),
+        dueThisWeek: countPatientsByReminderType(programPatients, 'dueThisWeek'),
+      };
+      
+      const messages: Record<ReminderType, string> = {
+        dueToday: `${patientCounts.dueToday} patient${patientCounts.dueToday !== 1 ? 's' : ''} due for refill today`,
+        dueTomorrow: `${patientCounts.dueTomorrow} patient${patientCounts.dueTomorrow !== 1 ? 's' : ''} due tomorrow`,
+        dueThisWeek: `${patientCounts.dueThisWeek} patient${patientCounts.dueThisWeek !== 1 ? 's' : ''} due this week`,
+      };
+      
+      const enabledMessages = types
+        .filter(t => patientCounts[t] > 0)
+        .map(t => messages[t]);
+      
+      const notificationBody = enabledMessages.length > 0 
+        ? enabledMessages.join(' • ') 
+        : `No patients due for refill in your selected categories.`;
+      
+      const notification = new Notification(`${meta.label} Appointment Reminder (Test)`, {
+        body: notificationBody,
+        icon: '/logo.png',
+        badge: '/logo.png',
+        tag: `caresync-test-${program}`,
+        requireInteraction: false,
+      });
+      
+      // Handle notification click - navigate to program page with filter
+      notification.onclick = () => {
+        window.focus();
+        const baseUrl = `/${program}`;
+        const filterType = types.find(t => patientCounts[t] > 0);
+        const url = filterType ? `${baseUrl}?filter=${filterType}` : baseUrl;
+        window.location.href = url;
+        notification.close();
+      };
+      
+      // Auto-close after 5 seconds
+      setTimeout(() => notification.close(), 5000);
+      
+      toast.success('Test reminder sent. Click it to view patients!');
+    } catch (error) {
+      console.error('Failed to create notification:', error);
+      toast.error('Failed to send test reminder. Check browser notification settings.');
+    }
   };
 
   const updateProgram = (program: keyof ReminderSettings, changes: Partial<ProgramReminder>) => {
@@ -176,7 +312,7 @@ export default function ReminderPage() {
           Reminders
         </h2>
         <p className="text-muted-foreground mt-1">
-          Configure scheduled reminders for TBCare and HIVCare. Notifications are local and persist across refreshes (requires browser/device notification permission).
+          Configure scheduled reminders for TBCare, HIVCare, EPI, and ANC. Notifications are local and persist across refreshes (requires browser/device notification permission).
         </p>
         <p className="text-sm text-muted-foreground mt-1">
           Tip: choose “weekly” for planned check-ins, and “daily” for critical follow-ups.
@@ -205,33 +341,80 @@ export default function ReminderPage() {
       <div className="space-y-4">
         {(Object.entries(programMeta) as [keyof ReminderSettings, typeof programMeta.tbcare][]).map(([key, meta]) => {
           const config = settings[key];
-          const Icon = meta.icon;
           const types = config.reminderTypes || ['dueToday'];
+          const programPatients = patientsByProgram[key];
+          
+          // Calculate patient counts for the selected reminder types
+          const patientCounts = {
+            dueToday: countPatientsByReminderType(programPatients, 'dueToday'),
+            dueTomorrow: countPatientsByReminderType(programPatients, 'dueTomorrow'),
+            dueThisWeek: countPatientsByReminderType(programPatients, 'dueThisWeek'),
+          };
+          
+          const totalDue = types.reduce((sum, type) => sum + patientCounts[type], 0);
+          
           return (
-            <Card key={key} className={`transition-all ${config.enabled ? 'border-primary/30' : 'opacity-75'}`}>
+            <Card key={key} className={`transition-all ${config.enabled ? 'border-primary/30' : 'opacity-75'} ${meta.locked ? 'opacity-60' : ''}`}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`h-9 w-9 rounded-lg ${meta.colorClass} flex items-center justify-center`}>
-                      <Icon className="h-5 w-5 text-primary-foreground" />
-                    </div>
+                    <ProgramIcon program={key} className="h-9 w-9" />
                     <div>
-                      <CardTitle className="text-base">{meta.label}</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-base">{meta.label}</CardTitle>
+                        {meta.locked && <Lock className="h-4 w-4 text-muted-foreground" />}
+                      </div>
                       <CardDescription className="text-xs">
-                        {config.enabled
+                        {meta.locked ? 'Locked' : (config.enabled
                           ? `${config.frequency === 'daily' ? 'Every day' : `Every ${DAYS[config.dayOfWeek ?? 1]}`} at ${config.time}`
-                          : 'Off'}
+                          : 'Off')}
                       </CardDescription>
                     </div>
                   </div>
-                  <Switch
-                    checked={config.enabled}
-                    onCheckedChange={(checked) => updateProgram(key, { enabled: checked })}
-                  />
+                  <div className="flex flex-col items-end gap-1">
+                    {!meta.locked && totalDue > 0 && (
+                      <div className="flex items-center gap-1 text-sm font-medium text-orange-600">
+                        <Users className="h-4 w-4" />
+                        <span>{totalDue} patient{totalDue !== 1 ? 's' : ''}</span>
+                      </div>
+                    )}
+                    <Switch
+                      checked={config.enabled}
+                      disabled={meta.locked}
+                      onCheckedChange={(checked) => updateProgram(key, { enabled: checked })}
+                    />
+                  </div>
                 </div>
               </CardHeader>
-              {config.enabled && (
+              {config.enabled && !meta.locked && (
                 <CardContent className="pt-0 space-y-4">
+                  <div className="border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-2">Patient Count Summary</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className={`text-center rounded p-2 ${types.includes('dueToday') ? 'bg-blue-100 dark:bg-blue-900/50 border border-blue-300 dark:border-blue-700' : 'bg-muted'}`}>
+                        <p className="text-xs text-muted-foreground font-medium">Today</p>
+                        <p className={`text-sm font-bold ${types.includes('dueToday') ? 'text-blue-900 dark:text-blue-100' : 'text-foreground'}`}>
+                          {patientCounts.dueToday}
+                        </p>
+                      </div>
+                      <div className={`text-center rounded p-2 ${types.includes('dueTomorrow') ? 'bg-blue-100 dark:bg-blue-900/50 border border-blue-300 dark:border-blue-700' : 'bg-muted'}`}>
+                        <p className="text-xs text-muted-foreground font-medium">Tomorrow</p>
+                        <p className={`text-sm font-bold ${types.includes('dueTomorrow') ? 'text-blue-900 dark:text-blue-100' : 'text-foreground'}`}>
+                          {patientCounts.dueTomorrow}
+                        </p>
+                      </div>
+                      <div className={`text-center rounded p-2 ${types.includes('dueThisWeek') ? 'bg-blue-100 dark:bg-blue-900/50 border border-blue-300 dark:border-blue-700' : 'bg-muted'}`}>
+                        <p className="text-xs text-muted-foreground font-medium">This Week</p>
+                        <p className={`text-sm font-bold ${types.includes('dueThisWeek') ? 'text-blue-900 dark:text-blue-100' : 'text-foreground'}`}>
+                          {patientCounts.dueThisWeek}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-blue-700 dark:text-blue-200 mt-2">
+                      📌 Highlighted: Categories included in reminders. Click notification to view patients.
+                    </p>
+                  </div>
+
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium text-foreground">Reminder details</p>
                     <Button size="sm" variant="secondary" onClick={() => previewReminder(key)}>
@@ -268,13 +451,20 @@ export default function ReminderPage() {
                   <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label className="text-xs text-muted-foreground">Frequency</Label>
-                      <Select value={config.frequency} onValueChange={(v) => updateProgram(key, { frequency: v as Frequency })}>
+                      <Select value={config.frequency} onValueChange={(v) => {
+                        const newFreq = v as Frequency;
+                        if (newFreq === 'weekly' && !config.dayOfWeek) {
+                          updateProgram(key, { frequency: newFreq, dayOfWeek: 1, time: '08:00' });
+                        } else {
+                          updateProgram(key, { frequency: newFreq });
+                        }
+                      }}>
                         <SelectTrigger className="h-9">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="daily">Daily</SelectItem>
-                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="weekly">Weekly (Mondays)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -282,6 +472,7 @@ export default function ReminderPage() {
                     <div className="space-y-1.5">
                       <Label className="text-xs text-muted-foreground flex items-center gap-1">
                         <Clock className="h-3 w-3" /> Time
+                        {types.includes('dueTomorrow') && <span className="text-orange-600 font-medium ml-auto text-xs">(6:00 PM suggested)</span>}
                       </Label>
                       <input
                         type="time"
@@ -289,6 +480,9 @@ export default function ReminderPage() {
                         onChange={(e) => updateProgram(key, { time: e.target.value })}
                         className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       />
+                      {types.includes('dueTomorrow') && config.time !== '18:00' && (
+                        <p className="text-xs text-orange-700 dark:text-orange-200">💡 Tip: Set to 18:00 (6:00 PM) for tomorrow reminders</p>
+                      )}
                     </div>
                   </div>
 
