@@ -176,25 +176,31 @@ export default function Dashboard({ program }: DashboardProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold text-foreground flex items-center gap-2">
-            <ProgramIcon
-              program={program}
-              className="h-8 w-8 md:h-12 md:w-12"
-            />
-            {getProgramLabel(program)} Dashboard
-          </h2>
-          <p className="text-sm text-muted-foreground">Patient overview for {getProgramLabel(program)}</p>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <p className="text-muted-foreground">Loading dashboard...</p>
         </div>
-        <Button
-          size="sm"
-          className="self-start md:self-auto"
-          onClick={() => navigate(`/${program}?addPatient=true`)}
-        >
-          <Plus className="h-4 w-4 mr-1" />Add Patient
-        </Button>
-      </div>
+      ) : (
+        <>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-foreground flex items-center gap-2">
+                <ProgramIcon
+                  program={program}
+                  className="h-8 w-8 md:h-12 md:w-12"
+                />
+                {getProgramLabel(program)} Dashboard
+              </h2>
+              <p className="text-sm text-muted-foreground">Patient overview for {getProgramLabel(program)}</p>
+            </div>
+            <Button
+              size="sm"
+              className="self-start md:self-auto"
+              onClick={() => navigate(`/${program}?addPatient=true`)}
+            >
+              <Plus className="h-4 w-4 mr-1" />Add Patient
+            </Button>
+          </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {cards.map((card, i) => (
@@ -340,15 +346,16 @@ export default function Dashboard({ program }: DashboardProps) {
         </div>
       )}
 
-
-      {patients.length === 0 && !isLoading && (
-        <Card className="program-card">
-          <CardContent className="py-12 text-center">
-            <ProgramIcon program={program} className="h-12 w-12 opacity-40 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground">No patients yet</h3>
-            <p className="text-muted-foreground mt-1">Go to the patient list to start adding patients.</p>
-          </CardContent>
-        </Card>
+        {patients.length === 0 && (
+          <Card className="program-card">
+            <CardContent className="py-12 text-center">
+              <ProgramIcon program={program} className="h-12 w-12 opacity-40 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-foreground">No patients yet</h3>
+              <p className="text-muted-foreground mt-1">Go to the patient list to start adding patients.</p>
+            </CardContent>
+          </Card>
+        )}
+      </>
       )}
     </div>
   );

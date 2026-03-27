@@ -3,6 +3,7 @@ import { useLogs } from '@/hooks/useLogs';
 import { usePatients } from '@/hooks/usePatients';
 import type { ProgramType, Patient } from '@/db/database';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format, parseISO } from 'date-fns';
@@ -92,7 +93,12 @@ export default function TrackingLogPage({ program }: TrackingLogPageProps) {
       '15-30': 0,
       '31+': 0,
     };
-    patients
+
+    const relevantPatients = selectedPatientId
+      ? patients.filter(p => p.id === selectedPatientId)
+      : patients;
+
+    relevantPatients
       .filter(p => p.status === 'overdue' && p.nextDueDate)
       .forEach(p => {
         const days = getDaysOverdue(p);
@@ -102,12 +108,23 @@ export default function TrackingLogPage({ program }: TrackingLogPageProps) {
         else buckets['31+']++;
       });
     return Object.entries(buckets).map(([name, value]) => ({ name, value }));
-  }, [patients]);
+  }, [patients, selectedPatientId]);
 
   const selectedPatient = selectedPatientId 
     ? uniquePatients.find(p => p.id === selectedPatientId)
     : null;
   const selectedPatientLogs = selectedPatientId ? getPatientLogs(selectedPatientId) : [];
+
+  const totalLogs = logs?.length || 0;
+  const totalPatients = patients?.length || 0;
+  const followUpCount = logs.filter(l => l.action === 'follow-up-call').length;
+  const noShowCount = logs.filter(l => l.action === 'no-show').length;
+  const overdueCount = patients.filter(p => p.status === 'overdue').length;
+  const averageDaysOverdue = patients
+    .filter(p => p.status === 'overdue' && p.nextDueDate)
+    .map(p => getDaysOverdue(p))
+    .reduce((sum, n) => sum + n, 0) || 0;
+  const overdueAverage = overdueCount ? Math.round(averageDaysOverdue / overdueCount) : 0;
 
   const handleDownload = (fileFormat: 'excel' | 'word' | 'pdf') => {
     // Get all logs with patient names, filtered by search
@@ -146,31 +163,60 @@ export default function TrackingLogPage({ program }: TrackingLogPageProps) {
   };
 
   return (
-    <div className="p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold">Defaulter Tracing Log</h2>
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <h2 className="text-2xl font-bold">Defaulter Tracing Log</h2>
+          <p className="text-sm text-muted-foreground">Monitor patient follow-up, no-shows, and overdue cases with clear actions.</p>
+        </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => handleDownload('excel')}>
-            Excel
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => handleDownload('word')}>
-            Word
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => handleDownload('pdf')}>
-            PDF
-          </Button>
+          <Button variant="outline" size="sm" onClick={() => handleDownload('excel')}>Excel</Button>
+          <Button variant="outline" size="sm" onClick={() => handleDownload('word')}>Word</Button>
+          <Button variant="outline" size="sm" onClick={() => handleDownload('pdf')}>PDF</Button>
         </div>
       </div>
 
-      <div className="flex gap-4 mb-4">
-        <div className="relative flex-1">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Card className="border">
+          <CardContent className="space-y-1">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">Total logs</p>
+            <p className="text-2xl font-semibold">{totalLogs}</p>
+          </CardContent>
+        </Card>
+        <Card className="border">
+          <CardContent className="space-y-1">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">Overdue patients</p>
+            <p className="text-2xl font-semibold">{overdueCount}</p>
+            <Badge variant="secondary">Avg overdue {overdueAverage} days</Badge>
+          </CardContent>
+        </Card>
+        <Card className="border">
+          <CardContent className="space-y-1">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">Follow-up actions</p>
+            <p className="text-2xl font-semibold">{followUpCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="border">
+          <CardContent className="space-y-1">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">No-shows</p>
+            <p className="text-2xl font-semibold">{noShowCount}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="relative flex-1 max-w-xl">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search patients or reasons..."
+            placeholder="Search by patient, reason, or status..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-9"
           />
+        </div>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setSearch('')}>Clear</Button>
+          <Badge variant="outline" className="text-foreground">Patient count: {totalPatients}</Badge>
         </div>
       </div>
 
@@ -179,25 +225,46 @@ export default function TrackingLogPage({ program }: TrackingLogPageProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Patient/Client</TableHead>
-              <TableHead>Days Overdue</TableHead>
+              <TableHead>Facility</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Overdue (days)</TableHead>
               <TableHead>Last Action</TableHead>
-              <TableHead>Last Date</TableHead>
+              <TableHead>Last Visit</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {uniquePatients.map(p => (
-              <TableRow 
-                key={p.id} 
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() => setSelectedPatientId(p.id)}
-              >
-                <TableCell className="font-semibold">{p.name}</TableCell>                <TableCell>{getDaysOverdue(p)}</TableCell>                <TableCell>{
-                  p.lastLog.action === 'follow-up-call' ? 'Follow-up call' :
-                  p.lastLog.action === 'no-show' ? 'No show' : p.lastLog.action
-                }</TableCell>
-                <TableCell>{format(new Date(p.lastLog.date), 'dd MMM yyyy HH:mm')}</TableCell>
+            {uniquePatients.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
+                  No matching defaulter tracing records found.
+                </TableCell>
               </TableRow>
-            ))}
+            )}
+            {uniquePatients.map(p => {
+              const status = p.patient?.status ?? 'unknown';
+              const daysOverdue = getDaysOverdue(p.patient || ({ nextDueDate: '', status: 'active' } as Patient));
+              const actionLabel = p.lastLog.action === 'follow-up-call' ? 'Follow-up call' : p.lastLog.action === 'no-show' ? 'No show' : p.lastLog.action;
+              const statusBadge = status === 'overdue' ? 'destructive' : status === 'active' ? 'secondary' : 'outline';
+
+              return (
+                <TableRow
+                  key={p.id}
+                  className="cursor-pointer hover:bg-muted/60"
+                  onClick={() => setSelectedPatientId(p.id)}
+                >
+                  <TableCell className="font-semibold">{p.name}</TableCell>
+                  <TableCell>{p.patient?.facility || 'Not set'}</TableCell>
+                  <TableCell>
+                    <Badge variant={statusBadge as any} className="text-xs px-2 py-1">
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{daysOverdue}</TableCell>
+                  <TableCell>{actionLabel}</TableCell>
+                  <TableCell>{format(new Date(p.lastLog.date), 'dd MMM yyyy HH:mm')}</TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
@@ -205,7 +272,14 @@ export default function TrackingLogPage({ program }: TrackingLogPageProps) {
       <div className="mt-6">
         <Card>
           <CardHeader>
-            <CardTitle>Overdue Distribution</CardTitle>
+            <div className="flex flex-col gap-1">
+              <CardTitle>Overdue Distribution</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {selectedPatientId
+                  ? `Selected patient view: ${selectedPatient?.name || 'unknown'} (drilldown)`
+                  : 'Showing all overdue cases (click row to view patient-specific buckets)'}
+              </p>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="h-56">

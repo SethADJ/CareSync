@@ -69,63 +69,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <div className={`min-h-screen flex w-full ${sidebarClass}`}>
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 flex items-center border-b border-border/60 bg-card/80 backdrop-blur-md px-3 md:px-4 shrink-0 sticky top-0 z-30">
-            <SidebarTrigger className="mr-2 md:mr-3" />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => window.history.back()}
-              className="h-8 w-8 mr-1 hidden md:inline-flex"
-              aria-label="Go back"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => window.history.forward()}
-              className="h-8 w-8 mr-2 md:mr-3 hidden md:inline-flex"
-              aria-label="Go forward"
-            >
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+          <header className="h-20 flex items-center border-b border-border/60 bg-card/95 backdrop-blur-md px-4 md:px-6 shrink-0 sticky top-0 z-30">
             <button
               onClick={() => navigate("/")}
-              className="flex items-center gap-3 hover:opacity-70 transition-opacity"
+              className="flex items-center gap-2 hover:opacity-90 transition-opacity"
               aria-label="Go to home"
             >
-              <Logo className="h-16 w-16 md:h-20 md:w-20 drop-shadow-sm" />
+              <Logo className="h-24 w-24 md:h-28 md:w-28 drop-shadow-md" />
             </button>
+            <div className="flex-1" />
 
-            {/* Program tab indicator */}
-            {(() => {
-              const tabInfo = getProgramTabInfo(location.pathname);
-              if (!tabInfo) return null;
-              const tabLabels = ['Dashboard', 'Patients', 'Reports', 'Log'];
-              return (
-                <div className="ml-auto flex items-center gap-0.5 md:gap-1 overflow-x-auto">
-                  {tabLabels.map((label, i) => (
-                    <button
-                      key={label}
-                      onClick={() => {
-                        const tab = programTabs[i];
-                        navigate(tab ? `/${tabInfo.program}/${tab}` : `/${tabInfo.program}`);
-                      }}
-                      className={`px-2 md:px-2.5 py-1 rounded-full text-[10px] md:text-xs font-medium transition-all whitespace-nowrap ${
-                        i === tabInfo.tabIndex
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              );
-            })()}
           </header>
           <main
-            className="flex-1 overflow-auto p-3 md:p-6 bg-texture bg-grain relative"
+            className="flex-1 overflow-auto p-3 md:p-6 bg-texture bg-grain relative min-w-0 overflow-x-hidden"
             {...swipeHandlers}
           >
             <AnimatePresence mode="wait">

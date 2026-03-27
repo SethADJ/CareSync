@@ -1,4 +1,4 @@
-export type ProgramType = 'tbcare' | 'hivcare';
+export type ProgramType = 'tbcare' | 'hivcare' | 'epi' | 'anc';
 
 export type ARTRegimen = 'TDF/3TC/DTG' | 'TDF/3TC/EFV' | 'AZT/3TC/NVP' | 'AZT/3TC/EFV' | 'ABC/3TC/DTG' | 'ABC/3TC/EFV' | 'other';
 export type WHOStage = '1' | '2' | '3' | '4';
@@ -48,6 +48,14 @@ export interface Patient {
   hivCurrentRefill?: number; // current refill cycle number
   hivAttendance?: Record<number, 'showed' | 'missed'>; // refill attendance tracking
   hivRescheduledDate?: string; // rescheduled refill date
+  // EPI fields
+  epiStartDate?: string;
+  epiVaccines?: string[];
+  epiNextDueDate?: string;
+  // ANC fields
+  ancStartDate?: string;
+  ancGestationalAge?: number;
+  ancNextVisitDate?: string;
   // Common
   dateOfBirth?: string;
   location?: string;

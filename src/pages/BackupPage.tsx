@@ -52,16 +52,17 @@ export default function BackupPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 rounded-lg border p-6">
         <h1 className="text-2xl font-bold text-foreground">Backup & Restore</h1>
-        <p className="text-muted-foreground">
-          <strong>{patientCount}</strong> patients on this device.
+        <p className="text-muted-foreground mt-1">
+          <strong>{patientCount}</strong> patients on this device
+          {lastBackup && (
+            <>
+              {' • '}
+              Last backup: {format(parseISO(lastBackup), 'dd MMM yyyy, HH:mm')}
+            </>
+          )}
         </p>
-        {lastBackup && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Last backup: {format(parseISO(lastBackup), 'dd MMM yyyy, HH:mm')}
-          </p>
-        )}
       </div>
 
       {/* Local Backup */}
@@ -69,10 +70,10 @@ export default function BackupPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Download className="h-4 w-4 text-primary" />
-            Backup
+            Local Backup
           </CardTitle>
           <CardDescription className="text-xs">
-            Export and import your backup files.
+            Export and import backup files on this device
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
@@ -85,6 +86,7 @@ export default function BackupPage() {
         </CardContent>
       </Card>
 
+      {/* Restore Confirmation Dialog */}
       <AlertDialog open={!!confirmRestore} onOpenChange={(open) => !open && setConfirmRestore(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

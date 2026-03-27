@@ -13,6 +13,8 @@ import { ProgramIcon } from '@/components/ProgramIcon';
 const programs = [
   { key: 'tbcare', label: 'TBCare', description: 'TB treatment tracking & DOTS cycle monitoring', gradient: 'from-primary to-primary/60', locked: false },
   { key: 'hivcare', label: 'HIVCare', description: 'ART adherence & viral load follow-up', gradient: 'from-destructive to-destructive/60', locked: false },
+  { key: 'epi', label: 'EPI', description: 'Expanded Programme on Immunization', gradient: 'from-green-500 to-green-400', locked: true },
+  { key: 'anc', label: 'ANC', description: 'Antenatal Care monitoring', gradient: 'from-purple-500 to-purple-400', locked: true },
 ];
 
 const containerVariants = {

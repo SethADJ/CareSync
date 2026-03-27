@@ -111,12 +111,40 @@ export default function ReminderPage() {
   const [permissionGranted, setPermissionGranted] = useState(
     'Notification' in window && Notification.permission === 'granted'
   );
+  const notificationSupported = 'Notification' in window;
 
   useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().then(p => setPermissionGranted(p === 'granted'));
+    if (!notificationSupported) {
+      toast.error('Browser does not support notifications. Reminders will work only in supported browsers.');
+      return;
     }
-  }, []);
+
+    if (Notification.permission === 'default') {
+      Notification.requestPermission().then((p) => setPermissionGranted(p === 'granted'));
+    } else {
+      setPermissionGranted(Notification.permission === 'granted');
+    }
+  }, [notificationSupported]);
+
+  const previewReminder = (program: keyof ReminderSettings) => {
+    if (!notificationSupported) {
+      toast.error('Notifications are not supported in this environment.');
+      return;
+    }
+    if (!permissionGranted) {
+      toast.error('Please enable notifications to test reminders.');
+      return;
+    }
+
+    const meta = programMeta[program];
+    new Notification(`${meta.label} Reminder (Test)`, {
+      body: `This is a test reminder for ${meta.label}.`,
+      icon: '/favicon.ico',
+      tag: `caresync-test-${program}`,
+    });
+
+    toast.success('Test reminder sent.');
+  };
 
   const updateProgram = (program: keyof ReminderSettings, changes: Partial<ProgramReminder>) => {
     setSettings(prev => ({
@@ -148,7 +176,10 @@ export default function ReminderPage() {
           Reminders
         </h2>
         <p className="text-muted-foreground mt-1">
-          Set up automatic reminders for each program. Works offline like a phone alarm.
+          Configure scheduled reminders for TBCare and HIVCare. Notifications are local and persist across refreshes (requires browser/device notification permission).
+        </p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Tip: choose “weekly” for planned check-ins, and “daily” for critical follow-ups.
         </p>
       </div>
 
@@ -201,11 +232,17 @@ export default function ReminderPage() {
               </CardHeader>
               {config.enabled && (
                 <CardContent className="pt-0 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-foreground">Reminder details</p>
+                    <Button size="sm" variant="secondary" onClick={() => previewReminder(key)}>
+                      Test Reminder
+                    </Button>
+                  </div>
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground flex items-center gap-1">
                       <CalendarDays className="h-3 w-3" /> Remind me about
                     </Label>
-                    <div className="space-y-2">
+                    <div className="flex flex-col gap-3">
                       {REMINDER_TYPE_OPTIONS.map((option) => (
                         <label
                           key={option.value}
@@ -228,7 +265,7 @@ export default function ReminderPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label className="text-xs text-muted-foreground">Frequency</Label>
                       <Select value={config.frequency} onValueChange={(v) => updateProgram(key, { frequency: v as Frequency })}>

@@ -98,6 +98,8 @@ export function getProgramLabel(program: ProgramType): string {
   const labels: Record<ProgramType, string> = {
     tbcare: 'TBCare',
     hivcare: 'HIVCare',
+    epi: 'EPI',
+    anc: 'ANC',
   };
   return labels[program];
 }
@@ -106,6 +108,8 @@ export function getProgramColor(program: ProgramType): string {
   const colors: Record<ProgramType, string> = {
     tbcare: 'bg-primary',
     hivcare: 'bg-accent',
+    epi: 'bg-green-500',
+    anc: 'bg-purple-500',
   };
   return colors[program];
 }

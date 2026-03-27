@@ -10,6 +10,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Network } from '@capacitor/network';
 import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
 
 import WelcomePage from "@/pages/WelcomePage";
 import HomePage from "@/pages/HomePage";
@@ -57,21 +58,59 @@ const App = () => {
     // Only run mobile logic if we are actually running on a native device (Android/iOS)
     if (Capacitor.isNativePlatform()) {
       const initializeMobileFeatures = async () => {
-        // 1. Request Notification Permissions
-        const perm = await LocalNotifications.requestPermissions();
-        console.log('Notification permission:', perm.display);
+        // 1. Create a Channel (Mandatory for Android 8+)
+        await LocalNotifications.createChannel({
+          id: 'caresync-alerts',
+          name: 'CareSync Alerts',
+          description: 'General notifications for CareSync',
+          importance: 5, // High importance
+          visibility: 1,
+        });
 
-        // 2. Check Network for Offline/Online status
+        // 2. Request Permission
+        const perm = await LocalNotifications.requestPermissions();
+        
+        // 3. Check Network for Offline/Online status
         const status = await Network.getStatus();
         if (!status.connected) {
-          console.log("CareSync is running in offline mode.");
-          // You could trigger a Toast/Sonner here to let the user know
+          triggerOfflineAlert("Offline Mode", "CareSync is running in offline mode.");
         }
       };
 
       initializeMobileFeatures();
+
+      // Handle hardware back button
+      CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+        if (!canGoBack) {
+          CapacitorApp.exitApp();
+        } else {
+          window.history.back();
+        }
+      });
+
+      // Handle app resume to check login
+      CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+        if (isActive && !isLoggedIn()) {
+          window.location.href = '/login';
+        }
+      });
     }
   }, []);
+
+  const triggerOfflineAlert = async (title: string, body: string) => {
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          title: title,
+          body: body,
+          id: Math.floor(Math.random() * 1000), // Unique ID
+          schedule: { at: new Date(Date.now() + 1000 * 3) }, // 3 seconds later
+          channelId: 'caresync-alerts', // <--- MUST MATCH THE CHANNEL ID ABOVE
+          smallIcon: 'ic_launcher', // This is created by the asset generator
+        },
+      ],
+    });
+  };
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -94,6 +133,14 @@ const App = () => {
               <Route path="/hivcare" element={<ProgramPage program="hivcare" />} />
               <Route path="/hivcare/reports" element={<ReportPage program="hivcare" />} />
               <Route path="/hivcare/log" element={<TrackingLogPage program="hivcare" />} />
+              <Route path="/epi" element={<ProgramPage program="epi" />} />
+              <Route path="/epi/dashboard" element={<Dashboard program="epi" />} />
+              <Route path="/epi/reports" element={<ReportPage program="epi" />} />
+              <Route path="/epi/log" element={<TrackingLogPage program="epi" />} />
+              <Route path="/anc" element={<ProgramPage program="anc" />} />
+              <Route path="/anc/dashboard" element={<Dashboard program="anc" />} />
+              <Route path="/anc/reports" element={<ReportPage program="anc" />} />
+              <Route path="/anc/log" element={<TrackingLogPage program="anc" />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/backup" element={<BackupPage />} />
               <Route path="/reminders" element={<ReminderPage />} />

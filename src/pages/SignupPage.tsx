@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Capacitor } from '@capacitor/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -88,9 +90,15 @@ export default function SignupPage() {
   const validateStep1 = (): boolean => {
     const e: Partial<Record<string, string>> = {};
     if (!profile.firstName.trim()) e.firstName = 'First name is required';
+    else if (!/^[a-zA-Z\s]+$/.test(profile.firstName.trim())) e.firstName = 'First name must contain only letters and spaces';
+    if (profile.otherNames.trim() && !/^[a-zA-Z\s]+$/.test(profile.otherNames.trim())) e.otherNames = 'Other names must contain only letters and spaces';
     if (!profile.age.trim() || isNaN(Number(profile.age)) || Number(profile.age) < 18 || Number(profile.age) > 100) e.age = 'Valid age (18-100) required';
     if (!profile.sex) e.sex = 'Select your sex';
     if (!profile.phone.trim()) e.phone = 'Phone number is required';
+    else {
+      const rawPhone = profile.phone.replace(dialCode, '');
+      if (rawPhone.length !== 9 || !/^\d{9}$/.test(rawPhone)) e.phone = 'Phone number must be 9 digits';
+    }
     if (!profile.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email)) e.email = 'Valid email required';
     else if (!profile.email.toLowerCase().endsWith('@gmail.com')) e.email = 'Gmail address required';
     if (!profile.healthFacility.trim()) e.healthFacility = 'Health facility is required';
@@ -125,6 +133,26 @@ export default function SignupPage() {
       if (profile.email) {
         localStorage.setItem('caresync_backup_gmail', profile.email);
       }
+      // Request notification permission after successful sign-up
+      const requestNotificationsPermission = async () => {
+        if (Capacitor.isNativePlatform()) {
+          const perm = await LocalNotifications.requestPermissions();
+          if (perm.display === 'granted') {
+            await LocalNotifications.createChannel({
+              id: 'caresync-alerts',
+              name: 'CareSync Alerts',
+              description: 'General notifications for CareSync',
+              importance: 5,
+              visibility: 1,
+              sound: 'beep.wav',
+            });
+          }
+        } else if ('Notification' in window && Notification.permission === 'default') {
+          await Notification.requestPermission();
+        }
+      };
+
+      requestNotificationsPermission().catch(console.error);
       navigate('/welcome');
     }
   };
@@ -136,7 +164,7 @@ export default function SignupPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-lg"
+          className="w-full max-w-full sm:max-w-lg"
         >
           {/* Logo */}
           <div className="text-center mb-6">
@@ -173,7 +201,7 @@ export default function SignupPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="firstName">First Name</Label>
                         <Input id="firstName" value={profile.firstName} onChange={e => update('firstName', e.target.value)} placeholder="First name" />
@@ -184,7 +212,7 @@ export default function SignupPage() {
                         <Input id="otherNames" value={profile.otherNames} onChange={e => update('otherNames', e.target.value)} placeholder="Other names" />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="age">Age</Label>
                         <Input id="age" type="number" value={profile.age} onChange={e => update('age', e.target.value)} placeholder="Age" min={18} max={100} />

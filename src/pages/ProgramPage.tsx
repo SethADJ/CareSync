@@ -29,7 +29,7 @@ interface ProgramPageProps {
 }
 
 export default function ProgramPage({ program }: ProgramPageProps) {
-  const { patients, addPatient, updatePatient, deletePatient } = usePatients(program);
+  const { patients, addPatient, updatePatient, deletePatient, isLoading } = usePatients(program);
   const { addLog } = useLogs(program);
   const { isModuleUnlocked } = useLicense();
   const navigate = useNavigate();
@@ -178,6 +178,17 @@ export default function ProgramPage({ program }: ProgramPageProps) {
     setRescheduleDate('');
   };
 
+  if (program === 'epi' || program === 'anc') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <Lock className="h-16 w-16 text-muted-foreground/40 mb-4" />
+        <h2 className="text-xl font-bold text-foreground mb-2">Under Development</h2>
+        <p className="text-muted-foreground mb-4">{getProgramLabel(program)} module is currently under development.</p>
+        <Button onClick={() => navigate('/')}>Back to Home</Button>
+      </div>
+    );
+  }
+
   if (!isModuleUnlocked(program)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
@@ -265,11 +276,17 @@ export default function ProgramPage({ program }: ProgramPageProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">{getProgramLabel(program)}</h2>
-          <p className="text-muted-foreground">{filtered.length} patients</p>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <p className="text-muted-foreground">Loading patients...</p>
         </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-foreground">{getProgramLabel(program)}</h2>
+              <p className="text-muted-foreground">{filtered.length} patients</p>
+            </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={() => setUploadDialogOpen(true)}>
             <FileSpreadsheet className="h-4 w-4 mr-1" />Import Excel
@@ -669,6 +686,9 @@ export default function ProgramPage({ program }: ProgramPageProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      </>
+    )}
     </div>
   );
 }
@@ -676,7 +696,7 @@ export default function ProgramPage({ program }: ProgramPageProps) {
 // Country phone config
 const COUNTRY_PHONE: Record<string, { code: string; digits: number; placeholder: string }> = {
   'South Africa': { code: '+27', digits: 9, placeholder: '812345678' },
-  'Nigeria': { code: '+234', digits: 10, placeholder: '8012345678' },
+  'Nigeria': { code: '+234', digits: 9, placeholder: '801234567' },
   'Kenya': { code: '+254', digits: 9, placeholder: '712345678' },
   'Ghana': { code: '+233', digits: 9, placeholder: '241234567' },
   'Ethiopia': { code: '+251', digits: 9, placeholder: '912345678' },
@@ -752,6 +772,7 @@ function PatientForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) { toast.error('Name is required'); return; }
+    if (!/^[a-zA-Z\s]+$/.test(name.trim())) { toast.error('Name must contain only letters and spaces'); return; }
 
     // Validate phone
     const cleanPhone = phoneNumber.replace(/\D/g, '');
@@ -860,7 +881,7 @@ function PatientForm({
 
       <div>
         <Label>{program === 'tbcare' ? 'Residential Location / Town' : 'Location'}</Label>
-        <Input value={location} onChange={e => setLocation(e.target.value)} placeholder={program === 'tbcare' ? 'e.g. Soweto, Johannesburg' : 'e.g. Ward 5, Clinic A'} />
+        <Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Location" />
       </div>
 
       {program === 'tbcare' && (

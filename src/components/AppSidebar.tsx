@@ -25,6 +25,8 @@ import {
 const programMap: Record<string, { title: string; url: string; colorClass: string; bgClass: string; locked: boolean }> = {
   tbcare: { title: "TBCare", url: "/tbcare", colorClass: "text-primary", bgClass: "bg-primary", locked: false },
   hivcare: { title: "HIVCare", url: "/hivcare", colorClass: "text-destructive", bgClass: "bg-destructive", locked: false },
+  epi: { title: "EPI", url: "/epi", colorClass: "text-blue-600", bgClass: "bg-blue-600", locked: true },
+  anc: { title: "ANC", url: "/anc", colorClass: "text-green-600", bgClass: "bg-green-600", locked: true },
 };
 
 const settingsItems = [
@@ -34,12 +36,12 @@ const settingsItems = [
 ];
 
 function getCurrentProgram(pathname: string): string | null {
-  const match = pathname.match(/^\/(tbcare|hivcare)/);
+  const match = pathname.match(/^\/(tbcare|hivcare|epi|anc)/);
   return match ? match[1] : null;
 }
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
   const navigate = useNavigate();
@@ -64,18 +66,19 @@ export function AppSidebar() {
       setShowDevDialog(true);
     } else {
       navigate(`/${key}/dashboard`);
+      if (isMobile) setOpenMobile(false);
     }
   };
 
   return (
     <>
-      <Sidebar collapsible="icon" className="bg-gradient-to-b from-sidebar/50 to-sidebar [background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,.02) 10px, rgba(0,0,0,.02) 20px)]">
+      <Sidebar collapsible="icon" className="bg-gradient-to-b from-sidebar/50 to-sidebar [background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 11px)]">
         <SidebarHeader className="p-4">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate('/profile')}
             className="flex items-center gap-2.5 hover:opacity-80 transition-opacity w-full"
           >
-            <Avatar className={`${collapsed ? 'h-10 w-10 mx-auto' : 'h-12 w-12'} shrink-0 border-2 border-sidebar-foreground/20 ring-2 ring-sidebar-foreground/5`} style={{ backgroundColor: storedAvatar.color }}>
+            <Avatar className={`${collapsed ? 'h-12 w-12 mx-auto' : 'h-16 w-16'} shrink-0 border-3 border-sidebar-foreground/30 ring-3 ring-sidebar-foreground/10`} style={{ backgroundColor: storedAvatar.color }}>
               {storedAvatar.type === 'image' ? (
                 <AvatarImage src={storedAvatar.src || undefined} alt={userName} />
               ) : (
@@ -87,6 +90,9 @@ export function AppSidebar() {
             {!collapsed && (
               <div className="flex flex-col items-start min-w-0">
                 <span className="text-sm font-bold text-sidebar-foreground truncate">{userName}</span>
+                {userProfile?.healthFacility && (
+                  <span className="text-xs text-sidebar-foreground/70 truncate">{userProfile.healthFacility}</span>
+                )}
               </div>
             )}
           </button>
@@ -105,8 +111,19 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       onClick={() => {
                         const prog = getCurrentProgram(location.pathname) || 'tbcare';
-                        navigate(programMap[prog].url);
+                        navigate(`${programMap[prog].url}/dashboard`);
                       }}
+                      isActive={isActive(currentProgram ? `${programMap[currentProgram].url}/dashboard` : '/tbcare/dashboard')}
+                    >
+                      <BarChart3 className="h-4 w-4" />
+                      <span>Dashboard</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={() => {
+                        const prog = getCurrentProgram(location.pathname) || 'tbcare';
+                        navigate(programMap[prog].url);                          if (isMobile) setOpenMobile(false);                      }}
                       isActive={isActive(currentProgram ? programMap[currentProgram].url : '/tbcare')}
                     >
                       <ClipboardList className="h-4 w-4" />
@@ -117,8 +134,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       onClick={() => {
                         const prog = getCurrentProgram(location.pathname) || 'tbcare';
-                        navigate(`${programMap[prog].url}/reports`);
-                      }}
+                        navigate(`${programMap[prog].url}/reports`);                          if (isMobile) setOpenMobile(false);                      }}
                       isActive={isActive(currentProgram ? `${programMap[currentProgram].url}/reports` : '/tbcare/reports')}
                     >
                       <BarChart3 className="h-4 w-4" />
@@ -129,8 +145,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       onClick={() => {
                         const prog = getCurrentProgram(location.pathname) || 'tbcare';
-                        navigate(`${programMap[prog].url}/log`);
-                      }}
+                        navigate(`${programMap[prog].url}/log`);                          if (isMobile) setOpenMobile(false);                      }}
                       isActive={isActive(currentProgram ? `${programMap[currentProgram].url}/log` : '/tbcare/log')}
                     >
                       <ClipboardList className="h-4 w-4" />
@@ -182,7 +197,13 @@ export function AppSidebar() {
               <SidebarMenu>
                 {settingsItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton onClick={() => navigate(item.url)} isActive={isActive(item.url)}>
+                    <SidebarMenuButton
+                      onClick={() => {
+                        navigate(item.url);
+                        if (isMobile) setOpenMobile(false);
+                      }}
+                      isActive={isActive(item.url)}
+                    >
                       <item.icon className="h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
                     </SidebarMenuButton>
