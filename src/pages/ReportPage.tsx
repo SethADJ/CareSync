@@ -5,7 +5,7 @@ import { getProgramLabel } from '@/utils/program-logic';
 import { db, type ProgramType } from '@/db/database';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Shield, Heart, Baby, Users as UsersIcon, FileText, Table2, BarChart3, PieChart as PieIcon, LineChart as LineIcon, LayoutList, TrendingUp, TrendingDown, Users, UserCheck, UserX, Calendar, Download, Activity } from 'lucide-react';
+import { Shield, Heart, Baby, Users as UsersIcon, FileText, Table2, BarChart3, PieChart as PieIcon, LineChart as LineIcon, LayoutList, TrendingUp, TrendingDown, Users, UserCheck, UserX, Calendar, Download, Activity, RefreshCw } from 'lucide-react';
 import { format, parseISO, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, eachMonthOfInterval, addDays } from 'date-fns';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, LineChart, Line, PieChart, Pie } from 'recharts';
@@ -62,6 +62,7 @@ export default function ReportPage({ program }: ReportPageProps) {
   const [adherenceTrendView, setAdherenceTrendView] = useState<ViewMode>('bar');
   const [diseaseBurdenView, setDiseaseBurdenView] = useState<ViewMode>('bar');
   const [locationView, setLocationView] = useState<ViewMode>('bar');
+  const [refreshCounter, setRefreshCounter] = useState(0);
 
   const dateRange = useMemo(() => {
     if (period === 'monthly') {
@@ -472,6 +473,16 @@ export default function ReportPage({ program }: ReportPageProps) {
                 {years.map(y => <option key={y} value={y}>{y}</option>)}
               </select>
             )}
+
+            {/* Refresh Button */}
+            <button
+              onClick={() => setRefreshCounter(c => c + 1)}
+              title="Refresh report data"
+              className="h-9 px-3 rounded-md border border-input bg-background hover:bg-accent text-foreground flex items-center gap-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
             
             {/* Export Buttons */}
             <div className="flex gap-2 w-full sm:w-auto">

@@ -32,7 +32,8 @@ export default function TrackingLogPage({ program }: TrackingLogPageProps) {
       ...l,
       patientName: patients.find(p => p && p.id === l.patientId)?.name || 'Unknown',
       patient: patients.find(p => p && p.id === l.patientId),
-    }));
+    }))
+      .filter(l => l.patient); // Only include logs where patient exists
 
     // Get unique patients who have logs matching search
     const uniqueMap = new Map();
@@ -63,11 +64,13 @@ export default function TrackingLogPage({ program }: TrackingLogPageProps) {
   // Get all logs for a specific patient
   const getPatientLogs = (patientId: string) => {
     if (!logs || !Array.isArray(logs)) return [];
+    const patient = patients.find(p => p.id === patientId);
+    if (!patient) return []; // Exclude orphaned logs
     return logs
       .filter(l => l && l.patientId === patientId)
       .map(l => ({
         ...l,
-        patientName: patients.find(p => p && p.id === l.patientId)?.name || 'Unknown',
+        patientName: patient.name,
       }))
       .sort((a, b) => {
         try {
@@ -115,10 +118,10 @@ export default function TrackingLogPage({ program }: TrackingLogPageProps) {
     : null;
   const selectedPatientLogs = selectedPatientId ? getPatientLogs(selectedPatientId) : [];
 
-  const totalLogs = logs?.length || 0;
+  const totalLogs = logs?.filter(l => patients.some(p => p.id === l.patientId)).length || 0;
   const totalPatients = patients?.length || 0;
-  const followUpCount = logs.filter(l => l.action === 'follow-up-call').length;
-  const noShowCount = logs.filter(l => l.action === 'no-show').length;
+  const followUpCount = logs.filter(l => l.action === 'follow-up-call' && patients.some(p => p.id === l.patientId)).length;
+  const noShowCount = logs.filter(l => l.action === 'no-show' && patients.some(p => p.id === l.patientId)).length;
   const overdueCount = patients.filter(p => p.status === 'overdue').length;
   const averageDaysOverdue = patients
     .filter(p => p.status === 'overdue' && p.nextDueDate)
@@ -127,12 +130,14 @@ export default function TrackingLogPage({ program }: TrackingLogPageProps) {
   const overdueAverage = overdueCount ? Math.round(averageDaysOverdue / overdueCount) : 0;
 
   const handleDownload = (fileFormat: 'excel' | 'word' | 'pdf') => {
-    // Get all logs with patient names, filtered by search
+    // Get all logs with patient names, filtered by search, excluding orphaned logs
     const logsToExport = logs
       .map(l => ({
         ...l,
+        patient: patients.find(p => p.id === l.patientId),
         patientName: patients.find(p => p.id === l.patientId)?.name || 'Unknown',
       }))
+      .filter(l => l.patient) // Exclude orphaned logs
       .filter(l => {
         const matchesSearch = !search ||
           l.patientName.toLowerCase().includes(search.toLowerCase()) ||

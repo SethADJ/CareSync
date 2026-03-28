@@ -18,7 +18,8 @@ export function useBackupReminder() {
       const now = new Date();
       const isMonday = now.getDay() === 1; // 1 = Monday
       const hour = now.getHours();
-      const isEightAM = hour === 8; // 8:00 AM
+      const minute = now.getMinutes();
+      const isEightAM = hour === 8 && minute < 10; // 8:00-8:09 AM window
       
       // Check if reminder was already shown today
       const reminderShownToday = localStorage.getItem(REMINDER_SHOWN_KEY);
@@ -32,7 +33,7 @@ export function useBackupReminder() {
         if (isSameDay) return; // Already shown today
       }
 
-      // Only show on Monday at 8:00 AM
+      // Only show on Monday at 8:00-8:09 AM
       if (isMonday && isEightAM) {
         const lastBackup = localStorage.getItem(LAST_BACKUP_KEY);
         const daysSince = lastBackup

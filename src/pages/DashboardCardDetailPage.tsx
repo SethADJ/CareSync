@@ -7,6 +7,7 @@ import { ProgramType, type Patient } from '@/db/database';
 import { format, parseISO } from 'date-fns';
 import { usePatients } from '@/hooks/usePatients';
 import { useLogs } from '@/hooks/useLogs';
+import { toast } from 'sonner';
 
 export default function DashboardCardDetailPage() {
   const params = useParams<{ program?: ProgramType; filter?: string }>();
@@ -45,9 +46,10 @@ export default function DashboardCardDetailPage() {
     if (status === 'showed') {
       const maxCycle = isHIV ? 12 : 7;
       const nextCycle = Math.min(cycle + 1, maxCycle);
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
       const updated: Partial<Patient> = isHIV
-        ? { hivAttendance: attendance, hivCurrentRefill: nextCycle, hivRescheduledDate: undefined, status: 'ok' }
-        : { tbAttendance: attendance, tbCurrentCycle: nextCycle, tbRescheduledDate: undefined, status: 'ok' };
+        ? { hivAttendance: attendance, hivCurrentRefill: nextCycle, hivRescheduledDate: today, status: 'ok' }
+        : { tbAttendance: attendance, tbCurrentCycle: nextCycle, tbRescheduledDate: today, status: 'ok' };
       await updatePatient?.(patient.id, updated);
       setSelectedPatient({ ...patient, ...updated });
       addLog?.({
@@ -57,6 +59,7 @@ export default function DashboardCardDetailPage() {
         action: 'follow-up-call',
       });
       reload();
+      toast.success(`✓ Marked ${patient.name} as showed. Adherence rate updated. Next cycle: ${nextCycle}`);
     } else {
       const updated: Partial<Patient> = isHIV
         ? { hivAttendance: attendance, status: 'overdue' as const }
@@ -71,6 +74,7 @@ export default function DashboardCardDetailPage() {
         reason: followUpReason || undefined,
       });
       reload();
+      toast.warning(`⚠ Marked ${patient.name} as did not show. Added to defaulters. Logged for follow-up.`);
       setShowFollowUpReason(true);
     }
   };

@@ -63,6 +63,24 @@ export default function ProfilePage() {
     navigate('/login');
   };
 
+  const handleClearAllData = () => {
+    if (!window.confirm('⚠️ This will delete ALL patients, logs, and appointment data. This action cannot be undone.\n\nAre you sure?')) {
+      return;
+    }
+    // Clear all program patient data
+    localStorage.removeItem('patients_tbcare');
+    localStorage.removeItem('patients_hivcare');
+    localStorage.removeItem('patients_epi');
+    localStorage.removeItem('patients_anc');
+    // Clear logs
+    localStorage.removeItem('logs');
+    // Clear appointments/reminders
+    localStorage.removeItem('reminders');
+    localStorage.removeItem('appointments');
+    // Hard refresh the page to reload with empty data
+    window.location.href = '/';
+  };
+
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -213,9 +231,14 @@ export default function ProfilePage() {
             <CheckCircle className="h-4 w-4 text-success" />
             <span className="text-sm text-muted-foreground">Terms & Privacy accepted</span>
           </div>
-          <Button variant="destructive" size="sm" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-1" /> Logout
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleClearAllData} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+              Clear Data
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-1" /> Logout
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

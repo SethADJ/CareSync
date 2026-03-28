@@ -15,7 +15,7 @@ import {
   KeyRound, Eye, EyeOff, LogIn,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
-import { countries } from '@/utils/countries';
+import { countries, getPhoneConfig } from '@/utils/countries';
 
 const USER_KEY = 'caresync_user_profile';
 
@@ -84,8 +84,9 @@ export default function SignupPage() {
   // derived country/dialcode info
   const selectedCountry = countries.find(c => c.name === profile.country);
   const dialCode = selectedCountry?.dialCode || '';
-  // keep raw phone (without dial code) for editing
-  const phoneRaw = profile.phone.startsWith(dialCode) ? profile.phone.slice(dialCode.length) : profile.phone;
+  const phoneConfig = getPhoneConfig(profile.country);
+  // phone is stored as raw digits only
+  const phoneRaw = profile.phone;
 
   const validateStep1 = (): boolean => {
     const e: Partial<Record<string, string>> = {};
@@ -96,8 +97,9 @@ export default function SignupPage() {
     if (!profile.sex) e.sex = 'Select your sex';
     if (!profile.phone.trim()) e.phone = 'Phone number is required';
     else {
-      const rawPhone = profile.phone.replace(dialCode, '');
-      if (rawPhone.length !== 9 || !/^\d{9}$/.test(rawPhone)) e.phone = 'Phone number must be 9 digits';
+      const requiredDigits = phoneConfig?.digits || 9;
+      const rawPhone = profile.phone.replace(/\D/g, '');
+      if (rawPhone.length !== requiredDigits || !/^\d+$/.test(rawPhone)) e.phone = `Phone number must be ${requiredDigits} digits for ${profile.country}`;
     }
     if (!profile.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email)) e.email = 'Valid email required';
     else if (!profile.email.toLowerCase().endsWith('@gmail.com')) e.email = 'Gmail address required';
@@ -121,7 +123,8 @@ export default function SignupPage() {
     else if (step === 3 && profile.termsAccepted) setStep(4);
     else if (step === 4 && profile.privacyAccepted) {
       // finalize registration
-      const storedProfile = { ...profile, username: username.trim() };
+      const fullPhone = profile.phone ? `${dialCode}${profile.phone}` : '';
+      const storedProfile = { ...profile, phone: fullPhone, username: username.trim() };
       localStorage.setItem(USER_KEY, JSON.stringify(storedProfile));
       localStorage.setItem('caresync_username', username.trim());
       localStorage.setItem('caresync_password', password);
@@ -242,8 +245,8 @@ export default function SignupPage() {
                           onChange={e => {
                             const val = e.target.value;
                             update('country', val);
-                            const c = countries.find(c => c.name === val);
-                            if (c) update('phone', c.dialCode);
+                            // Clear phone when country changes since digit requirements may differ
+                            update('phone', '');
                           }}
                           placeholder="Start typing country"
                           className="pl-9"
@@ -259,24 +262,30 @@ export default function SignupPage() {
                       {errors.country && <p className="text-xs text-destructive mt-1">{errors.country}</p>}
                     </div>
                     <div>
-                      <Label htmlFor="phone">Phone Number {dialCode && `(${dialCode})`}</Label>
+                      <Label htmlFor="phone">Phone Number</Label>
                       <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <span className="absolute left-8 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{dialCode}</span>
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                        <div className="absolute left-8 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+                          {getPhoneConfig(profile.country)?.dialCode || '+1'}
+                        </div>
                         <Input
                           id="phone"
                           value={phoneRaw}
                           onChange={e => {
-                            let v = e.target.value;
-                            if (dialCode && v.startsWith(dialCode)) {
-                              v = v.slice(dialCode.length);
-                            }
-                            update('phone', dialCode + v);
+                            // Only allow digits and limit to required length
+                            const maxDigits = getPhoneConfig(profile.country)?.digits || 9;
+                            const val = e.target.value.replace(/\D/g, '').slice(0, maxDigits);
+                            update('phone', val);
                           }}
-                          placeholder={dialCode ? dialCode + '123456...' : '+1234567890'}
+                          placeholder={getPhoneConfig(profile.country)?.placeholder || '123456789'}
+                          type="tel"
+                          maxLength={getPhoneConfig(profile.country)?.digits || 9}
                           className="pl-20"
                         />
                       </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {profile.country && getPhoneConfig(profile.country)?.digits} digits required
+                      </p>
                       {errors.phone && <p className="text-xs text-destructive mt-1">{errors.phone}</p>}
                     </div>
                     <div>

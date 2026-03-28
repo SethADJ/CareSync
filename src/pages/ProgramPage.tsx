@@ -97,18 +97,26 @@ export default function ProgramPage({ program }: ProgramPageProps) {
       });
       setFollowUpPatient(patient);
       setFollowUpReason('');
+      toast.warning(`⚠ Marked ${patient.name} as did not show. Added to defaulters. Will affect adherence rate.`);
       return;
     }
 
-    // Showed: advance cycle, clear reschedule date
+    // Showed: advance cycle, update reschedule date to today so nextDueDate is recalculated correctly
     const maxCycle = isHIV ? 12 : 7;
     const nextCycle = Math.min(cycle + 1, maxCycle);
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
     if (isHIV) {
-      updatePatient(patient.id, { hivAttendance: attendance, hivCurrentRefill: nextCycle, hivRescheduledDate: undefined });
+      updatePatient(patient.id, { hivAttendance: attendance, hivCurrentRefill: nextCycle, hivRescheduledDate: today, status: 'ok' });
     } else {
-      updatePatient(patient.id, { tbAttendance: attendance, tbCurrentCycle: nextCycle, tbRescheduledDate: undefined });
+      updatePatient(patient.id, { tbAttendance: attendance, tbCurrentCycle: nextCycle, tbRescheduledDate: today, status: 'ok' });
     }
-    toast.success('Marked as showed — cycle advanced');
+    addLog({
+      patientId: patient.id,
+      program,
+      date: new Date().toISOString(),
+      action: 'follow-up-call',
+    });
+    toast.success(`✓ Marked ${patient.name} as showed. Adherence logged. Cycle: ${nextCycle}`);
   };
 
   const handleFollowUpConfirm = () => {
@@ -166,11 +174,13 @@ export default function ProgramPage({ program }: ProgramPageProps) {
       updatePatient(reschedulePatient.id, {
         hivAttendance: attendance,
         hivRescheduledDate: rescheduleDate,
+        status: 'overdue',
       });
     } else {
       updatePatient(reschedulePatient.id, {
         tbAttendance: attendance,
         tbRescheduledDate: rescheduleDate,
+        status: 'overdue',
       });
     }
     toast.success(`Rescheduled — all remaining visits updated from ${format(new Date(rescheduleDate), 'dd MMM yyyy')}`);
@@ -773,6 +783,10 @@ function PatientForm({
     e.preventDefault();
     if (!name.trim()) { toast.error('Name is required'); return; }
     if (!/^[a-zA-Z\s]+$/.test(name.trim())) { toast.error('Name must contain only letters and spaces'); return; }
+    
+    if (!sex.trim()) { toast.error('Sex is required'); return; }
+    
+    if (!location.trim()) { toast.error('Location is required'); return; }
 
     // Validate phone
     const cleanPhone = phoneNumber.replace(/\D/g, '');
@@ -881,7 +895,7 @@ function PatientForm({
 
       <div>
         <Label>{program === 'tbcare' ? 'Residential Location / Town' : 'Location'}</Label>
-        <Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Location" />
+        <Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Location" required />
       </div>
 
       {program === 'tbcare' && (

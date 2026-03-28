@@ -81,3 +81,35 @@ export const countries: Country[] = [
   { name: 'Zambia', code: 'ZM', dialCode: '+260', flag: flagEmoji('ZM') },
   { name: 'Zimbabwe', code: 'ZW', dialCode: '+263', flag: flagEmoji('ZW') },
 ];
+
+// Phone number format by country (digits required for local number)
+export const phoneFormats: Record<string, { digits: number; placeholder: string }> = {
+  'South Africa': { digits: 9, placeholder: '812345678' },
+  'Nigeria': { digits: 9, placeholder: '801234567' },
+  'Kenya': { digits: 9, placeholder: '712345678' },
+  'Ghana': { digits: 9, placeholder: '241234567' },
+  'Ethiopia': { digits: 9, placeholder: '912345678' },
+  'Tanzania': { digits: 9, placeholder: '712345678' },
+  'Uganda': { digits: 9, placeholder: '712345678' },
+  'Zimbabwe': { digits: 9, placeholder: '712345678' },
+  'Mozambique': { digits: 9, placeholder: '841234567' },
+  'Zambia': { digits: 9, placeholder: '971234567' },
+  'DRC': { digits: 9, placeholder: '812345678' },
+  'Cameroon': { digits: 9, placeholder: '671234567' },
+  'Rwanda': { digits: 9, placeholder: '781234567' },
+  'Malawi': { digits: 9, placeholder: '991234567' },
+};
+
+// Get phone config for a country
+export function getPhoneConfig(countryName: string) {
+  const country = countries.find(c => c.name === countryName);
+  if (!country) return null;
+  
+  const format = phoneFormats[countryName] || { digits: 9, placeholder: '123456789' };
+  return {
+    dialCode: country.dialCode,
+    flag: country.flag,
+    digits: format.digits,
+    placeholder: format.placeholder,
+  };
+}

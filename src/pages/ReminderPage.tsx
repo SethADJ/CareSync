@@ -109,7 +109,7 @@ function scheduleReminders(settings: ReminderSettings) {
 
   const timerIds: number[] = [];
 
-  Object.entries(settings).forEach(([program, config]) => {
+  const scheduleForProgram = (program: string, config: ProgramReminder) => {
     if (!config.enabled) return;
 
     const [hours, minutes] = config.time.split(':').map(Number);
@@ -175,10 +175,16 @@ function scheduleReminders(settings: ReminderSettings) {
           notification.close();
         };
       }
-      scheduleReminders(settings);
+      // Reschedule for next occurrence after notification fires
+      const updatedSettings = loadSettings();
+      scheduleForProgram(program, updatedSettings[program as keyof ReminderSettings]);
     }, msUntilNext);
 
     timerIds.push(timerId);
+  };
+
+  Object.entries(settings).forEach(([program, config]) => {
+    scheduleForProgram(program, config);
   });
 
   localStorage.setItem('caresync_reminder_timers', JSON.stringify(timerIds));
