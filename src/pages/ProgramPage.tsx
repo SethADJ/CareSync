@@ -392,6 +392,9 @@ export default function ProgramPage({ program }: ProgramPageProps) {
           <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingPatient ? 'Edit' : 'Add'} Patient</DialogTitle>
+              <DialogDescription>
+                {editingPatient ? 'Update patient information' : 'Enter patient details to add them to the program'}
+              </DialogDescription>
             </DialogHeader>
             <PatientForm
               program={program}

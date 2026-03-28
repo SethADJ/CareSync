@@ -5,7 +5,7 @@ import type { ProgramType, Patient } from '@/db/database';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { format, parseISO } from 'date-fns';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -307,6 +307,7 @@ export default function TrackingLogPage({ program }: TrackingLogPageProps) {
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedPatient?.name}</DialogTitle>
+            <DialogDescription>Activity history and patient details</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {selectedPatientLogs.length > 0 && (

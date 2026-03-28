@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { usePatients } from '@/hooks/usePatients';
 import { ProgramType } from '@/db/database';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -80,6 +80,7 @@ export default function AddPatientDialog({ open, onOpenChange, program }: AddPat
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add Patient</DialogTitle>
+          <DialogDescription>Enter the patient's details to add them to the program.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <Input placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} />

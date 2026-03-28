@@ -11,6 +11,8 @@ import { ProgramIcon } from '@/components/ProgramIcon';
 import { usePatients } from '@/hooks/usePatients';
 import { db, type Patient, type ProgramType } from '@/db/database';
 import { startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, parseISO, isWithinInterval, isSameDay } from 'date-fns';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { App as CapacitorApp } from '@capacitor/app';
 
 type Frequency = 'daily' | 'weekly';
 type ReminderType = 'dueToday' | 'dueTomorrow' | 'dueThisWeek';
@@ -103,7 +105,7 @@ function saveSettings(settings: ReminderSettings) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }
 
-function scheduleReminders(settings: ReminderSettings) {
+async function scheduleReminders(settings: ReminderSettings) {
   const existingTimers = JSON.parse(localStorage.getItem('caresync_reminder_timers') || '[]');
   existingTimers.forEach((id: number) => clearTimeout(id));
 
@@ -131,8 +133,8 @@ function scheduleReminders(settings: ReminderSettings) {
     const meta = programMeta[program as keyof typeof programMeta];
     const types = config.reminderTypes || ['dueToday'];
 
-    const timerId = window.setTimeout(() => {
-      if ('Notification' in window && Notification.permission === 'granted') {
+    const timerId = window.setTimeout(async () => {
+      try {
         // Get actual patient counts
         const patients = db.getPatients(program as ProgramType);
         const patientCounts = {
@@ -156,25 +158,45 @@ function scheduleReminders(settings: ReminderSettings) {
           ? enabledMessages.join(' • ') 
           : `No patients due for refill in your selected categories.`;
 
-        const notification = new Notification(`${meta.label} Appointment Reminder`, {
-          body: notificationBody,
-          icon: '/logo.png',
-          badge: '/logo.png',
-          tag: `caresync-${program}`,
-          requireInteraction: false,
+        // Determine which filter to show based on first enabled type with patients
+        const filterType = types.find(t => patientCounts[t] > 0);
+        const urlPath = filterType ? `/${program}?filter=${filterType}` : `/${program}`;
+
+        // Use Capacitor LocalNotifications for Android and browser support
+        await LocalNotifications.schedule({
+          notifications: [{
+            title: `${meta.label} Appointment Reminder`,
+            body: notificationBody,
+            id: Math.floor(Math.random() * 1000000),
+            smallIcon: 'logo',
+            largeBody: notificationBody,
+            extra: {
+              program,
+              filterType: filterType || 'none',
+            },
+          }],
         });
 
-        // Handle notification click - navigate to program page with filter
-        notification.onclick = () => {
-          window.focus();
-          const baseUrl = `/${program}`;
-          // Determine which filter to show based on first enabled type with patients
-          const filterType = types.find(t => patientCounts[t] > 0);
-          const url = filterType ? `${baseUrl}?filter=${filterType}` : baseUrl;
-          window.location.href = url;
-          notification.close();
-        };
+        // Fallback to Web Notifications API for browser
+        if ('Notification' in window && Notification.permission === 'granted') {
+          const notification = new Notification(`${meta.label} Appointment Reminder`, {
+            body: notificationBody,
+            icon: '/logo.png',
+            badge: '/logo.png',
+            tag: `caresync-${program}`,
+            requireInteraction: false,
+          });
+
+          notification.onclick = () => {
+            window.focus();
+            window.location.href = urlPath;
+            notification.close();
+          };
+        }
+      } catch (error) {
+        console.error('Failed to schedule notification:', error);
       }
+
       // Reschedule for next occurrence after notification fires
       const updatedSettings = loadSettings();
       scheduleForProgram(program, updatedSettings[program as keyof ReminderSettings]);
@@ -195,7 +217,6 @@ export default function ReminderPage() {
   const [permissionGranted, setPermissionGranted] = useState(
     'Notification' in window && Notification.permission === 'granted'
   );
-  const notificationSupported = 'Notification' in window;
   
   // Fetch patients for all programs
   const tbPatients = usePatients('tbcare').patients;
@@ -211,23 +232,34 @@ export default function ReminderPage() {
   };
 
   useEffect(() => {
-    if (!notificationSupported) {
-      toast.error('Browser does not support notifications. Reminders will work only in supported browsers.');
-      return;
-    }
+    const initializeNotifications = async () => {
+      try {
+        // Try to get existing permissions (Capacitor)
+        const result = await LocalNotifications.checkPermissions();
+        if (result.display === 'granted') {
+          setPermissionGranted(true);
+        } else if (result.display === 'prompt') {
+          // Request permissions if not yet determined
+          const requestResult = await LocalNotifications.requestPermissions();
+          setPermissionGranted(requestResult.display === 'granted');
+        } else {
+          setPermissionGranted(false);
+        }
+      } catch (error) {
+        // Fallback to Web Notifications API
+        console.log('Capacitor notifications not available, falling back to Web Notifications API');
+        if ('Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission().then((p) => setPermissionGranted(p === 'granted'));
+        } else if ('Notification' in window) {
+          setPermissionGranted(Notification.permission === 'granted');
+        }
+      }
+    };
 
-    if (Notification.permission === 'default') {
-      Notification.requestPermission().then((p) => setPermissionGranted(p === 'granted'));
-    } else {
-      setPermissionGranted(Notification.permission === 'granted');
-    }
-  }, [notificationSupported]);
+    initializeNotifications();
+  }, []);
 
-  const previewReminder = (program: keyof ReminderSettings) => {
-    if (!notificationSupported) {
-      toast.error('Notifications are not supported in this environment.');
-      return;
-    }
+  const previewReminder = async (program: keyof ReminderSettings) => {
     if (!permissionGranted) {
       toast.error('Please enable notifications to test reminders.');
       return;
@@ -260,31 +292,50 @@ export default function ReminderPage() {
         ? enabledMessages.join(' • ') 
         : `No patients due for refill in your selected categories.`;
       
-      const notification = new Notification(`${meta.label} Appointment Reminder (Test)`, {
-        body: notificationBody,
-        icon: '/logo.png',
-        badge: '/logo.png',
-        tag: `caresync-test-${program}`,
-        requireInteraction: false,
+      const filterType = types.find(t => patientCounts[t] > 0);
+
+      // Use Capacitor LocalNotifications first (works on Android and web)
+      await LocalNotifications.schedule({
+        notifications: [{
+          title: `${meta.label} Appointment Reminder (Test)`,
+          body: notificationBody,
+          id: Math.floor(Math.random() * 1000000),
+          smallIcon: 'logo',
+          largeBody: notificationBody,
+          extra: {
+            program,
+            filterType: filterType || 'none',
+            isTest: true,
+          },
+        }],
       });
-      
-      // Handle notification click - navigate to program page with filter
-      notification.onclick = () => {
-        window.focus();
-        const baseUrl = `/${program}`;
-        const filterType = types.find(t => patientCounts[t] > 0);
-        const url = filterType ? `${baseUrl}?filter=${filterType}` : baseUrl;
-        window.location.href = url;
-        notification.close();
-      };
-      
-      // Auto-close after 5 seconds
-      setTimeout(() => notification.close(), 5000);
+
+      // Fallback to Web Notifications for browser
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const notification = new Notification(`${meta.label} Appointment Reminder (Test)`, {
+          body: notificationBody,
+          icon: '/logo.png',
+          badge: '/logo.png',
+          tag: `caresync-test-${program}`,
+          requireInteraction: false,
+        });
+        
+        notification.onclick = () => {
+          window.focus();
+          const baseUrl = `/${program}`;
+          const url = filterType ? `${baseUrl}?filter=${filterType}` : baseUrl;
+          window.location.href = url;
+          notification.close();
+        };
+        
+        // Auto-close after 5 seconds
+        setTimeout(() => notification.close(), 5000);
+      }
       
       toast.success('Test reminder sent. Click it to view patients!');
     } catch (error) {
       console.error('Failed to create notification:', error);
-      toast.error('Failed to send test reminder. Check browser notification settings.');
+      toast.error('Failed to send test reminder. Check notification settings.');
     }
   };
 
@@ -318,7 +369,7 @@ export default function ReminderPage() {
           Reminders
         </h2>
         <p className="text-muted-foreground mt-1">
-          Configure scheduled reminders for TBCare, HIVCare, EPI, and ANC. Notifications are local and persist across refreshes (requires browser/device notification permission).
+          Configure scheduled reminders for TBCare, HIVCare, EPI, and ANC. Notifications work on Android and browser, and persist across refreshes (requires device notification permission).
         </p>
         <p className="text-sm text-muted-foreground mt-1">
           Tip: choose “weekly” for planned check-ins, and “daily” for critical follow-ups.
@@ -333,9 +384,16 @@ export default function ReminderPage() {
               <p className="text-sm font-medium text-foreground">Notifications Blocked</p>
               <p className="text-xs text-muted-foreground">Enable notifications in your browser/device settings for reminders to work.</p>
             </div>
-            <Button size="sm" variant="outline" onClick={() => {
-              if ('Notification' in window) {
-                Notification.requestPermission().then(p => setPermissionGranted(p === 'granted'));
+            <Button size="sm" variant="outline" onClick={async () => {
+              try {
+                const result = await LocalNotifications.requestPermissions();
+                setPermissionGranted(result.display === 'granted');
+              } catch (error) {
+                // Fallback to Web Notifications API
+                if ('Notification' in window) {
+                  const permission = await Notification.requestPermission();
+                  setPermissionGranted(permission === 'granted');
+                }
               }
             }}>
               Enable
