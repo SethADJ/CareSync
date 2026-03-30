@@ -169,12 +169,12 @@ export default function TrackingLogPage({ program }: TrackingLogPageProps) {
 
   return (
     <div className="p-4 space-y-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
         <div>
           <h2 className="text-2xl font-bold">Defaulter Tracing Log</h2>
           <p className="text-sm text-muted-foreground">Monitor patient follow-up, no-shows, and overdue cases with clear actions.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => handleDownload('excel')}>Excel</Button>
           <Button variant="outline" size="sm" onClick={() => handleDownload('word')}>Word</Button>
           <Button variant="outline" size="sm" onClick={() => handleDownload('pdf')}>PDF</Button>
@@ -225,8 +225,8 @@ export default function TrackingLogPage({ program }: TrackingLogPageProps) {
         </div>
       </div>
 
-      <div>
-        <Table>
+      <div className="overflow-x-auto rounded-lg border">
+        <Table className="min-w-[650px]">
           <TableHeader>
             <TableRow>
               <TableHead>Patient/Client</TableHead>

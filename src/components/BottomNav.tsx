@@ -61,7 +61,7 @@ export function BottomNav() {
               key={item.label}
               onClick={() => navigate(item.path)}
               variant={active ? "default" : "outline"}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 h-auto py-3 rounded-lg transition-all ${
+              className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-1 h-auto py-3 rounded-lg transition-all whitespace-normal ${
                 active
                   ? "bg-primary text-primary-foreground shadow-md"
                   : "hover:bg-accent hover:text-accent-foreground"

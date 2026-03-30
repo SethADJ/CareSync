@@ -5,6 +5,7 @@ import { getUserProfile } from "@/pages/SignupPage";
 import { getStoredAvatar, getAvatarIcon } from "@/utils/avatar";
 import { Button } from "@/components/ui/button";
 import { ProgramIcon } from "@/components/ProgramIcon";
+import { Logo } from "@/components/Logo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -73,7 +74,10 @@ export function TopNav() {
               onClick={() => navigate('/welcome')}
               className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             >
-              <h1 className="text-2xl font-bold text-foreground">Home</h1>
+              <Logo className="h-20 w-20" />
+              <span className="text-xl font-bold text-foreground hidden sm:inline">
+                {activeProgramItem?.title || 'CareSync'}
+              </span>
             </button>
           </div>
 

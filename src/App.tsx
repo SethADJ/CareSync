@@ -88,12 +88,33 @@ const App = () => {
         }
       });
 
+      // Handle local notification tap (native only)
+      const onNotificationClick = async (notification: any) => {
+        const payload = notification?.notification?.extra || notification?.notification?.data || notification?.data;
+        if (!payload || !payload.program) return;
+
+        const program = payload.program;
+        const filterType = payload.filterType && payload.filterType !== 'none' ? payload.filterType : undefined;
+        const url = filterType ? `/${program}?filter=${filterType}` : `/${program}`;
+
+        // Navigate to relevant program page and show list
+        window.location.href = url;
+      };
+
+      const actionListener = LocalNotifications.addListener('localNotificationActionPerformed', onNotificationClick);
+      const receivedListener = LocalNotifications.addListener('localNotificationReceived', onNotificationClick);
+
       // Handle app resume to check login
       CapacitorApp.addListener('appStateChange', ({ isActive }) => {
         if (isActive && !isLoggedIn()) {
           window.location.href = '/login';
         }
       });
+
+      return () => {
+        actionListener.remove();
+        receivedListener.remove();
+      };
     }
   }, []);
 

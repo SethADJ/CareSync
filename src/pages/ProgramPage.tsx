@@ -292,12 +292,12 @@ export default function ProgramPage({ program }: ProgramPageProps) {
         </div>
       ) : (
         <>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
             <div>
               <h2 className="text-2xl font-bold text-foreground">{getProgramLabel(program)}</h2>
               <p className="text-muted-foreground">{filtered.length} patients</p>
             </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 justify-end w-full md:w-auto">
           <Button size="sm" variant="outline" onClick={() => setUploadDialogOpen(true)}>
             <FileSpreadsheet className="h-4 w-4 mr-1" />Import Excel
           </Button>
@@ -513,11 +513,11 @@ export default function ProgramPage({ program }: ProgramPageProps) {
                       {patient.status === 'completed' && <span className="status-badge-ok">Complete</span>}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex flex-wrap items-center gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 text-xs"
+                      className="h-8 min-w-[6.5rem] text-xs"
                       onClick={() => { setEditingPatient(patient); setDialogOpen(true); }}
                     >
                       <Edit2 className="h-3 w-3 mr-1" />Edit
@@ -526,7 +526,7 @@ export default function ProgramPage({ program }: ProgramPageProps) {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8 text-xs border-green-600/30 text-green-600 hover:bg-green-500/10"
+                        className="h-8 min-w-[6.5rem] text-xs border-green-600/30 text-green-600 hover:bg-green-500/10"
                         onClick={() => {
                           // log the call then open dialer
                           addLog({
@@ -547,7 +547,7 @@ export default function ProgramPage({ program }: ProgramPageProps) {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-8 text-xs border-green-600/30 text-green-600 hover:bg-green-500/10"
+                          className="h-8 min-w-[6.5rem] text-xs border-green-600/30 text-green-600 hover:bg-green-500/10"
                           onClick={() => handleAttendance(patient, 'showed')}
                         >
                           <CheckCircle className="h-3 w-3 mr-1" />Showed
@@ -555,7 +555,7 @@ export default function ProgramPage({ program }: ProgramPageProps) {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-8 text-xs border-red-600/30 text-red-600 hover:bg-red-500/10"
+                          className="h-8 min-w-[6.5rem] text-xs border-red-600/30 text-red-600 hover:bg-red-500/10"
                           onClick={() => handleAttendance(patient, 'missed')}
                         >
                           <XCircle className="h-3 w-3 mr-1" />Did Not Show
@@ -566,7 +566,7 @@ export default function ProgramPage({ program }: ProgramPageProps) {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 text-xs text-destructive border-destructive/30 ml-auto"
+                      className="h-8 min-w-[6.5rem] text-xs text-destructive border-destructive/30 ml-auto"
                       onClick={() => patient.id && handleDelete(patient.id)}
                     >
                       <Trash2 className="h-3 w-3" />

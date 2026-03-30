@@ -154,9 +154,9 @@ async function scheduleReminders(settings: ReminderSettings) {
           .filter(t => patientCounts[t] > 0)
           .map(t => messages[t]);
         
-        const notificationBody = enabledMessages.length > 0 
-          ? enabledMessages.join(' • ') 
-          : `No patients due for refill in your selected categories.`;
+        const notificationBody = enabledMessages.length > 0
+          ? `App log: ${enabledMessages.join(' • ')}. Tap to open the list.`
+          : `App log: No patients due for refill in your selected categories. Tap to open program.`;
 
         // Determine which filter to show based on first enabled type with patients
         const filterType = types.find(t => patientCounts[t] > 0);
@@ -288,9 +288,9 @@ export default function ReminderPage() {
         .filter(t => patientCounts[t] > 0)
         .map(t => messages[t]);
       
-      const notificationBody = enabledMessages.length > 0 
-        ? enabledMessages.join(' • ') 
-        : `No patients due for refill in your selected categories.`;
+      const notificationBody = enabledMessages.length > 0
+        ? `App log: ${enabledMessages.join(' • ')}. Tap to open the list.`
+        : `App log: No patients due for refill in your selected categories. Tap to open program.`;
       
       const filterType = types.find(t => patientCounts[t] > 0);
 
@@ -475,7 +475,7 @@ export default function ReminderPage() {
                       </div>
                     </div>
                     <p className="text-xs text-blue-700 dark:text-blue-200 mt-2">
-                      📌 Highlighted: Categories included in reminders. Click notification to view patients.
+                      📌 App log: daily due counts appear here. Click notification to open filtered patient list.
                     </p>
                   </div>
 
