@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { countries, getPhoneConfig } from '@/utils/countries';
+import { AVATAR_OPTIONS, getDefaultAvatar } from '@/utils/avatars';
 
 const USER_KEY = 'caresync_user_profile';
 
@@ -29,6 +30,7 @@ interface UserProfile {
   healthFacility: string;
   country: string;
   username: string;
+  avatarId: string;
   termsAccepted: boolean;
   privacyAccepted: boolean;
 }
@@ -43,6 +45,7 @@ const INITIAL_PROFILE: UserProfile = {
   healthFacility: '',
   country: '',
   username: '',
+  avatarId: getDefaultAvatar().id,
   termsAccepted: false,
   privacyAccepted: false,
 };
@@ -306,6 +309,29 @@ export default function SignupPage() {
                         <Input id="facility" value={profile.healthFacility} onChange={e => update('healthFacility', e.target.value)} placeholder="Facility name" className="pl-9" />
                       </div>
                       {errors.healthFacility && <p className="text-xs text-destructive mt-1">{errors.healthFacility}</p>}
+                    </div>
+
+                    <div>
+                      <Label className="mb-3 block">Select Your Avatar</Label>
+                      <div className="grid grid-cols-4 gap-2 sm:gap-3">
+                        {AVATAR_OPTIONS.map(avatar => (
+                          <motion.button
+                            key={avatar.id}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => update('avatarId', avatar.id)}
+                            className={`relative flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-all duration-200 ${
+                              profile.avatarId === avatar.id
+                                ? `${avatar.bgClass} text-white shadow-lg ring-2 ring-offset-2 ring-offset-background`
+                                : `${avatar.bgClass} text-white opacity-60 hover:opacity-100`
+                            }`}
+                            title={avatar.role}
+                          >
+                            <div className="text-xl">{avatar.icon}</div>
+                            <span className="text-xs font-medium text-center line-clamp-1">{avatar.role}</span>
+                          </motion.button>
+                        ))}
+                      </div>
                     </div>
 
                     <Button onClick={handleNext} className="w-full">

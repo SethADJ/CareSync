@@ -12,6 +12,40 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
+  build: {
+    target: 'esnext',
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+      },
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor': [
+            'react',
+            'react-dom',
+            'react-router-dom',
+          ],
+          'ui-lib': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-select',
+            '@radix-ui/react-tabs',
+          ],
+          'charts': [
+            'recharts',
+          ],
+          'forms': [
+            'react-hook-form',
+            'zod',
+            '@hookform/resolvers',
+          ],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     mode === "development" && componentTagger(),

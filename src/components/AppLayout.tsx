@@ -1,10 +1,11 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSwipe } from "@/hooks/useSwipe";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TopNav } from "@/components/TopNav";
 import { BottomNav } from "@/components/BottomNav";
 import { useBackupReminder } from "@/hooks/useBackupReminder";
+import { RefreshCw } from "lucide-react";
 
 function getSidebarClass(pathname: string): string {
   if (pathname.startsWith('/hivcare')) return 'sidebar-hivcare';
@@ -27,9 +28,26 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [swipeDir, setSwipeDir] = useState<'left' | 'right' | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const mainRef = useRef<HTMLDivElement>(null);
   useBackupReminder();
 
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    // Add a small delay for visual feedback
+    await new Promise(resolve => setTimeout(resolve, 800));
+    window.location.reload();
+  }, []);
+
   const handleSwipe = useCallback((direction: 'left' | 'right' | 'up' | 'down') => {
+    // Handle pull-to-refresh (down swipe at top of page)
+    if (direction === 'down') {
+      if (mainRef.current && mainRef.current.scrollTop === 0) {
+        handleRefresh();
+      }
+      return;
+    }
+
     if (direction !== 'left' && direction !== 'right') return;
 
     const tabInfo = getProgramTabInfo(location.pathname);
@@ -56,7 +74,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       }
       setSwipeDir(null);
     }, 100);
-  }, [navigate, location.pathname]);
+  }, [navigate, location.pathname, handleRefresh]);
 
   const swipeHandlers = useSwipe({ onSwipe: handleSwipe, threshold: 60 });
 
@@ -64,9 +82,22 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex flex-col w-full">
       <TopNav />
       <main
+        ref={mainRef}
         className="flex-1 overflow-auto p-3 md:p-6 bg-texture bg-grain relative min-w-0 overflow-x-hidden pb-28"
         {...swipeHandlers}
       >
+        {/* Pull-to-refresh indicator */}
+        {isRefreshing && (
+          <div className="fixed top-0 left-0 right-0 z-40 flex items-center justify-center pt-4">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="bg-primary text-white rounded-full p-3 shadow-lg"
+            >
+              <RefreshCw className="h-5 w-5" />
+            </motion.div>
+          </div>
+        )}
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}

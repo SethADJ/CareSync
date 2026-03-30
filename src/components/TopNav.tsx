@@ -1,8 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { User, HardDrive, BellRing, LogOut, Settings, Menu, X } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getUserProfile } from "@/pages/SignupPage";
-import { getStoredAvatar, getAvatarIcon } from "@/utils/avatar";
+import { getAvatarById } from "@/utils/avatars";
 import { Button } from "@/components/ui/button";
 import { ProgramIcon } from "@/components/ProgramIcon";
 import { Logo } from "@/components/Logo";
@@ -45,12 +44,9 @@ export function TopNav() {
   
   const userProfile = getUserProfile();
   const userName = userProfile?.firstName || 'User';
-  const storedAvatar = getStoredAvatar();
-  const AvatarIcon = getAvatarIcon(storedAvatar.icon || 'User');
 
   const [showDevDialog, setShowDevDialog] = useState(false);
   const [selectedLocked, setSelectedLocked] = useState('');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path);
 
@@ -104,45 +100,49 @@ export function TopNav() {
 
           {/* Right: Settings & User Menu */}
           <div className="flex items-center gap-2">
-            {/* Mobile Menu Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              {isMobileMenuOpen ? (
-                <X className="h-5 w-5" />
-              ) : (
-                <Menu className="h-5 w-5" />
-              )}
-            </Button>
-
-            {/* User Menu */}
+            {/* Programs Button */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 hover:opacity-80 transition-opacity p-1">
-                  <Avatar className="h-9 w-9 border-2 border-primary/20" style={{ backgroundColor: storedAvatar.color }}>
-                    {storedAvatar.type === 'image' ? (
-                      <AvatarImage src={storedAvatar.src || undefined} alt={userName} />
-                    ) : (
-                      <AvatarFallback className="text-primary-foreground text-xs font-bold">
-                        <AvatarIcon className="h-5 w-5" />
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
-                  <span className="hidden sm:inline text-sm font-medium text-foreground">{userName}</span>
+                <button className="flex items-center gap-2 hover:opacity-80 transition-opacity p-2 text-sm font-medium text-foreground">
+                  Programs
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel className="flex flex-col">
-                  <span>{userName}</span>
-                  {userProfile?.healthFacility && (
-                    <span className="text-xs text-muted-foreground">{userProfile.healthFacility}</span>
-                  )}
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {settingsItems.map((item) => (
+                {Object.entries(programMap).map(([key, item]) => {
+                  const isCurrentProgram = key === currentProgram;
+                  return (
+                    <DropdownMenuItem
+                      key={key}
+                      onClick={() => handleProgramClick(key)}
+                      className={`cursor-pointer transition-colors ${isCurrentProgram ? item.bgClass + ' text-white' : ''}`}
+                      onMouseEnter={(e) => {
+                        if (!isCurrentProgram) {
+                          e.currentTarget.classList.add(item.bgClass, 'text-white');
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isCurrentProgram) {
+                          e.currentTarget.classList.remove(item.bgClass, 'text-white');
+                        }
+                      }}
+                    >
+                      <ProgramIcon program={key} className="mr-2 h-4 w-4" />
+                      <span>{item.title}</span>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Settings Icon */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Settings className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {settingsItems.filter(item => item.title !== "My Profile").map((item) => (
                   <DropdownMenuItem
                     key={item.title}
                     onClick={() => navigate(item.url)}
@@ -165,55 +165,39 @@ export function TopNav() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Username Button - Navigate to Profile */}
+            <button
+              onClick={() => navigate('/profile')}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity p-1 text-sm font-medium text-foreground"
+            >
+              {userName}
+            </button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-border bg-background/95 px-4 py-3 space-y-2">
-            {Object.entries(programMap).map(([key, item]) => {
-              const isCurrentProgram = key === currentProgram;
-              return (
-                <button
-                  key={key}
-                  onClick={() => {
-                    handleProgramClick(key);
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                    isCurrentProgram
-                      ? `${item.bgClass} text-white`
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                  }`}
-                >
-                  <ProgramIcon program={key} className="h-7 w-7" />
-                  <span className="text-sm font-medium">{item.title}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
+
       </nav>
 
       {/* Under Development Dialog */}
       <Dialog open={showDevDialog} onOpenChange={setShowDevDialog}>
-        <DialogContent className="sm:max-w-md border-0 bg-white shadow-lg">
-          <div className="flex flex-col items-center justify-center text-center py-8 px-6">
+        <DialogContent className="w-[90vw] max-w-xs sm:max-w-sm border-0 bg-white shadow-lg rounded-3xl">
+          <div className="flex flex-col items-center justify-center text-center py-6 px-5">
             <motion.div
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 150, damping: 12 }}
-              className="h-20 w-20 rounded-2xl bg-yellow-100 flex items-center justify-center mb-6"
+              className="h-16 w-16 rounded-2xl bg-yellow-100 flex items-center justify-center mb-4"
             >
-              <Construction className="h-10 w-10 text-yellow-500" />
+              <Construction className="h-8 w-8 text-yellow-500" />
             </motion.div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Development</h2>
-            <p className="text-base text-gray-700 mb-8">
-              <span className="font-semibold">{selectedLocked}</span> module is currently under development and will be available in a future update. Stay tuned!
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Development</h2>
+            <p className="text-sm text-gray-700 mb-6 leading-relaxed">
+              <span className="font-semibold">{selectedLocked}</span> is coming soon!
             </p>
             <button
               onClick={() => setShowDevDialog(false)}
-              className="px-8 py-2 bg-gray-200 text-gray-800 font-medium rounded-lg hover:bg-gray-300 transition-colors"
+              className="px-6 py-2 bg-yellow-200 text-gray-800 font-medium rounded-full hover:bg-yellow-300 transition-colors text-sm"
             >
               Got it
             </button>

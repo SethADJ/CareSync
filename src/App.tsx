@@ -58,22 +58,34 @@ const App = () => {
     // Only run mobile logic if we are actually running on a native device (Android/iOS)
     if (Capacitor.isNativePlatform()) {
       const initializeMobileFeatures = async () => {
-        // 1. Create a Channel (Mandatory for Android 8+)
-        await LocalNotifications.createChannel({
-          id: 'caresync-alerts',
-          name: 'CareSync Alerts',
-          description: 'General notifications for CareSync',
-          importance: 5, // High importance
-          visibility: 1,
-        });
+        try {
+          // 1. Create a Channel (Mandatory for Android 8+)
+          await LocalNotifications.createChannel({
+            id: 'caresync-alerts',
+            name: 'CareSync Alerts',
+            description: 'General notifications for CareSync',
+            importance: 5, // High importance
+            visibility: 1,
+          });
 
-        // 2. Request Permission
-        const perm = await LocalNotifications.requestPermissions();
-        
-        // 3. Check Network for Offline/Online status
-        const status = await Network.getStatus();
-        if (!status.connected) {
-          triggerOfflineAlert("Offline Mode", "CareSync is running in offline mode.");
+          // 2. Check and Request Notification Permissions (Android 13+)
+          const permStatus = await LocalNotifications.checkPermissions();
+          
+          // Only request if permission is not granted
+          if (permStatus.display !== 'granted') {
+            const result = await LocalNotifications.requestPermissions();
+            if (result.display === 'denied') {
+              console.warn('Notification permission denied by user');
+            }
+          }
+          
+          // 3. Check Network for Offline/Online status
+          const status = await Network.getStatus();
+          if (!status.connected) {
+            triggerOfflineAlert("Offline Mode", "CareSync is running in offline mode.");
+          }
+        } catch (error) {
+          console.error('Mobile feature initialization error:', error);
         }
       };
 

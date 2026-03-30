@@ -12,6 +12,7 @@ import { usePatients } from '@/hooks/usePatients';
 import { db, type Patient, type ProgramType } from '@/db/database';
 import { startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, parseISO, isWithinInterval, isSameDay } from 'date-fns';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 
 type Frequency = 'daily' | 'weekly';
@@ -106,12 +107,16 @@ function saveSettings(settings: ReminderSettings) {
 }
 
 async function scheduleReminders(settings: ReminderSettings) {
-  const existingTimers = JSON.parse(localStorage.getItem('caresync_reminder_timers') || '[]');
-  existingTimers.forEach((id: number) => clearTimeout(id));
+  try {
+    // Cancel all existing scheduled notifications for this app
+    await LocalNotifications.cancelAll();
+  } catch (error) {
+    console.log('No existing notifications to cancel');
+  }
 
-  const timerIds: number[] = [];
+  const notificationsToSchedule: any[] = [];
 
-  const scheduleForProgram = (program: string, config: ProgramReminder) => {
+  Object.entries(settings).forEach(([program, config]) => {
     if (!config.enabled) return;
 
     const [hours, minutes] = config.time.split(':').map(Number);
@@ -119,97 +124,55 @@ async function scheduleReminders(settings: ReminderSettings) {
     const next = new Date();
     next.setHours(hours, minutes, 0, 0);
 
+    // If we've passed this time today, schedule for next occurrence
     if (next <= now) {
       next.setDate(next.getDate() + 1);
     }
 
+    // For weekly reminders, adjust to the correct day
     if (config.frequency === 'weekly' && config.dayOfWeek !== undefined) {
       while (next.getDay() !== config.dayOfWeek) {
         next.setDate(next.getDate() + 1);
       }
     }
 
-    const msUntilNext = next.getTime() - now.getTime();
     const meta = programMeta[program as keyof typeof programMeta];
     const types = config.reminderTypes || ['dueToday'];
 
-    const timerId = window.setTimeout(async () => {
-      try {
-        // Get actual patient counts
-        const patients = db.getPatients(program as ProgramType);
-        const patientCounts = {
-          dueToday: countPatientsByReminderType(patients, 'dueToday'),
-          dueTomorrow: countPatientsByReminderType(patients, 'dueTomorrow'),
-          dueThisWeek: countPatientsByReminderType(patients, 'dueThisWeek'),
-        };
+    // Generate a unique ID for this scheduled notification
+    const notificationId = Math.floor(Math.random() * 1000000000);
 
-        // Build message with actual counts
-        const messages: Record<ReminderType, string> = {
-          dueToday: `${patientCounts.dueToday} patient${patientCounts.dueToday !== 1 ? 's' : ''} due for refill today`,
-          dueTomorrow: `${patientCounts.dueTomorrow} patient${patientCounts.dueTomorrow !== 1 ? 's' : ''} due tomorrow`,
-          dueThisWeek: `${patientCounts.dueThisWeek} patient${patientCounts.dueThisWeek !== 1 ? 's' : ''} due this week`,
-        };
-        
-        const enabledMessages = types
-          .filter(t => patientCounts[t] > 0)
-          .map(t => messages[t]);
-        
-        const notificationBody = enabledMessages.length > 0
-          ? `App log: ${enabledMessages.join(' • ')}. Tap to open the list.`
-          : `App log: No patients due for refill in your selected categories. Tap to open program.`;
-
-        // Determine which filter to show based on first enabled type with patients
-        const filterType = types.find(t => patientCounts[t] > 0);
-        const urlPath = filterType ? `/${program}?filter=${filterType}` : `/${program}`;
-
-        // Use Capacitor LocalNotifications for Android and browser support
-        await LocalNotifications.schedule({
-          notifications: [{
-            title: `${meta.label} Appointment Reminder`,
-            body: notificationBody,
-            id: Math.floor(Math.random() * 1000000),
-            smallIcon: 'logo',
-            largeBody: notificationBody,
-            extra: {
-              program,
-              filterType: filterType || 'none',
-            },
-          }],
-        });
-
-        // Fallback to Web Notifications API for browser
-        if ('Notification' in window && Notification.permission === 'granted') {
-          const notification = new Notification(`${meta.label} Appointment Reminder`, {
-            body: notificationBody,
-            icon: '/logo.png',
-            badge: '/logo.png',
-            tag: `caresync-${program}`,
-            requireInteraction: false,
-          });
-
-          notification.onclick = () => {
-            window.focus();
-            window.location.href = urlPath;
-            notification.close();
-          };
-        }
-      } catch (error) {
-        console.error('Failed to schedule notification:', error);
-      }
-
-      // Reschedule for next occurrence after notification fires
-      const updatedSettings = loadSettings();
-      scheduleForProgram(program, updatedSettings[program as keyof ReminderSettings]);
-    }, msUntilNext);
-
-    timerIds.push(timerId);
-  };
-
-  Object.entries(settings).forEach(([program, config]) => {
-    scheduleForProgram(program, config);
+    notificationsToSchedule.push({
+      title: `${meta.label} Appointment Reminder`,
+      body: `It's time to manage appointments. Open now to check ${program} patients.`,
+      id: notificationId,
+      smallIcon: 'logo',
+      largeBody: `Tap to open ${meta.label} and manage patient appointments.`,
+      // Schedule for the calculated time
+      schedule: {
+        at: next,
+        // Repeat according to frequency setting
+        every: config.frequency === 'weekly' ? 'week' : 'day',
+      },
+      extra: {
+        program,
+        reminderTypes: types.join(','),
+        navigationUrl: `/${program}`,
+      },
+    });
   });
 
-  localStorage.setItem('caresync_reminder_timers', JSON.stringify(timerIds));
+  // Schedule all notifications at once
+  if (notificationsToSchedule.length > 0) {
+    try {
+      await LocalNotifications.schedule({
+        notifications: notificationsToSchedule,
+      });
+      console.log(`Scheduled ${notificationsToSchedule.length} background reminders using Capacitor`);
+    } catch (error) {
+      console.error('Failed to schedule notifications:', error);
+    }
+  }
 }
 
 export default function ReminderPage() {
@@ -346,6 +309,25 @@ export default function ReminderPage() {
     }));
   };
 
+  const handleToggleReminder = async (program: keyof ReminderSettings, checked: boolean) => {
+    // If enabling reminders on Android, request notification permission first
+    if (checked && Capacitor.isNativePlatform()) {
+      try {
+        const permStatus = await LocalNotifications.checkPermissions();
+        if (permStatus.display !== 'granted') {
+          const result = await LocalNotifications.requestPermissions();
+          if (result.display === 'denied') {
+            toast.error('Please enable notifications in settings to use reminders');
+            return; // Don't enable the reminder if permission is denied
+          }
+        }
+      } catch (error) {
+        console.error('Error requesting notification permission:', error);
+      }
+    }
+    updateProgram(program, { enabled: checked });
+  };
+
   const toggleReminderType = (program: keyof ReminderSettings, type: ReminderType) => {
     const current = settings[program].reminderTypes || ['dueToday'];
     const updated = current.includes(type)
@@ -445,7 +427,7 @@ export default function ReminderPage() {
                     <Switch
                       checked={config.enabled}
                       disabled={meta.locked}
-                      onCheckedChange={(checked) => updateProgram(key, { enabled: checked })}
+                      onCheckedChange={(checked) => handleToggleReminder(key, checked)}
                     />
                   </div>
                 </div>
