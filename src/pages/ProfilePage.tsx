@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { getUserProfile } from '@/pages/SignupPage';
 import { getAvatarDataUrl, getDefaultAvatarDataUrl, getInitials, AVATAR_COLORS, AVATAR_ICON_OPTIONS, getAvatarIcon, getStoredAvatar, AVATAR_ICON_KEY, AVATAR_COLOR_KEY } from '@/utils/avatar';
+import { AVATAR_OPTIONS } from '@/utils/avatars';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -19,9 +20,15 @@ export default function ProfilePage() {
   const saved = getUserProfile();
   const [editing, setEditing] = useState(false);
   const storedAvatar = getStoredAvatar();
+  
+  // Get the selected avatar from stored ID or from localStorage icon
+  const storedAvatarId = localStorage.getItem('caresync_avatar_id');
+  const selectedAvatarOption = storedAvatarId ? AVATAR_OPTIONS.find(a => a.id === storedAvatarId) : null;
+  const fallbackAvatarEmoji = selectedAvatarOption?.icon || (storedAvatar.type === 'icon' ? storedAvatar.src : '👨‍⚕️');
+  
   const [avatar, setAvatar] = useState<string | null>(() => storedAvatar.type === 'image' ? storedAvatar.src ?? null : null);
   const [selectedIcon, setSelectedIcon] = useState(storedAvatar.icon || AVATAR_ICON_OPTIONS[0].id);
-  const [selectedColor, setSelectedColor] = useState(storedAvatar.color || AVATAR_COLORS[0]);
+  const [selectedColor, setSelectedColor] = useState(selectedAvatarOption?.color || storedAvatar.color || AVATAR_COLORS[0]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState(saved || {
     firstName: '', otherNames: '', age: '', sex: '', phone: '', email: '', healthFacility: '', country: '', termsAccepted: false, privacyAccepted: false,
@@ -155,8 +162,8 @@ export default function ProfilePage() {
             {avatar ? (
               <AvatarImage src={avatar} alt="Profile" />
             ) : (
-              <AvatarFallback className="text-primary text-2xl font-bold">
-                <AvatarIcon className="h-10 w-10" />
+              <AvatarFallback className="text-3xl font-bold flex items-center justify-center">
+                {fallbackAvatarEmoji}
               </AvatarFallback>
             )}
           </Avatar>
@@ -226,16 +233,16 @@ export default function ProfilePage() {
       </Card>
 
       <Card>
-        <CardContent className="py-4 flex items-center justify-between">
+        <CardContent className="py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4 text-success" />
             <span className="text-sm text-muted-foreground">Terms & Privacy accepted</span>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleClearAllData} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button variant="outline" size="sm" onClick={handleClearAllData} className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-1 sm:flex-initial">
               Clear Data
             </Button>
-            <Button variant="destructive" size="sm" onClick={handleLogout}>
+            <Button variant="destructive" size="sm" onClick={handleLogout} className="flex-1 sm:flex-initial">
               <LogOut className="h-4 w-4 mr-1" /> Logout
             </Button>
           </div>

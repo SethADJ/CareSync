@@ -1,5 +1,5 @@
 {
-{  "name": "caresync",
+  "name": "caresync",
   "private": true,
   "version": "1.0.0",
   "type": "module",  "description": "CareSync - Clinical Patient Tracking for Healthcare Programs",

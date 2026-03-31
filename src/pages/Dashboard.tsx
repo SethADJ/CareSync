@@ -5,14 +5,13 @@ import { getViralLoadStatus } from '@/utils/program-logic';
 import type { ProgramType, Patient } from '@/db/database';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, Clock, CalendarDays, PersonStanding, CalendarClock, Activity, Droplets, TrendingDown, TrendingUp } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { startOfWeek, endOfWeek, parseISO, isWithinInterval, format, startOfDay, startOfMonth, endOfMonth, addDays, isSameDay, addMonths } from 'date-fns';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, LineChart, Line, PieChart, Pie } from 'recharts';
 import { motion } from 'framer-motion';
 import { ProgramIcon } from '@/components/ProgramIcon';
+import { useNavigate } from 'react-router-dom';
 
 interface DashboardProps {
   program: ProgramType;
@@ -193,16 +192,9 @@ export default function Dashboard({ program }: DashboardProps) {
               </h2>
               <p className="text-sm text-muted-foreground">Patient overview for {getProgramLabel(program)}</p>
             </div>
-            <Button
-              size="sm"
-              className="self-start md:self-auto"
-              onClick={() => navigate(`/${program}?addPatient=true`)}
-            >
-              <Plus className="h-4 w-4 mr-1" />Add Patient
-            </Button>
           </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {cards.map((card, i) => (
           <motion.div
             key={card.key}
@@ -290,7 +282,7 @@ export default function Dashboard({ program }: DashboardProps) {
 
       {/* HIV-specific: Viral Load Summary */}
       {program === 'hivcare' && hivMetrics && patients.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
             <Card className="program-card">
               <CardContent className="p-4 flex items-center gap-3">

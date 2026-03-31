@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { usePatients } from '@/hooks/usePatients';
 import { useLogs } from '@/hooks/useLogs';
@@ -34,7 +34,7 @@ export default function ProgramPage({ program }: ProgramPageProps) {
   const { isModuleUnlocked } = useLicense();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const filter = searchParams.get('filter');
   const [dialogOpen, setDialogOpen] = useState(() => searchParams.get('addPatient') === 'true');
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
@@ -53,6 +53,15 @@ export default function ProgramPage({ program }: ProgramPageProps) {
 
   // selection state for bulk operations
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Clear the addPatient query param when dialog closes
+  useEffect(() => {
+    if (!dialogOpen && searchParams.get('addPatient')) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('addPatient');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [dialogOpen, searchParams, setSearchParams]);
 
   const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { getUserProfile } from '@/pages/SignupPage';
 import { getStoredAvatar, getAvatarIcon } from '@/utils/avatar';
+import { AVATAR_OPTIONS } from '@/utils/avatars';
 import { ProgramIcon } from '@/components/ProgramIcon';
 import tbBg from '@/assets/TB.jpg';
 import hivBg from '@/assets/HIV.jpg';
@@ -45,6 +46,13 @@ export default function WelcomePage() {
   const initials = `${userProfile?.firstName?.[0] || ''}${userProfile?.otherNames?.[0] || ''}`.toUpperCase();
 
   const storedAvatar = getStoredAvatar();
+  
+  // Get the selected avatar from stored ID
+  const storedAvatarId = localStorage.getItem('caresync_avatar_id');
+  const selectedAvatarOption = storedAvatarId ? AVATAR_OPTIONS.find(a => a.id === storedAvatarId) : null;
+  const avatarEmoji = selectedAvatarOption?.icon || '👨‍⚕️';
+  const avatarColor = selectedAvatarOption?.color || storedAvatar.color;
+  
   const AvatarIcon = getAvatarIcon(storedAvatar.icon || 'User');
 
   const [showDevDialog, setShowDevDialog] = useState(false);
@@ -87,12 +95,12 @@ export default function WelcomePage() {
           transition={{ type: 'spring', stiffness: 120, damping: 15, delay: 0.1 }}
           className="mb-5 relative"
         >
-          <Avatar className="h-24 w-24 border-4 border-primary/20 shadow-xl ring-4 ring-primary/5" style={{ backgroundColor: storedAvatar.color }}>
+          <Avatar className="h-24 w-24 border-4 border-primary/20 shadow-xl ring-4 ring-primary/5" style={{ backgroundColor: avatarColor }}>
             {storedAvatar.type === 'image' ? (
               <AvatarImage src={storedAvatar.src || undefined} alt={userName} />
             ) : (
-              <AvatarFallback className="text-primary-foreground text-2xl font-bold">
-                <AvatarIcon className="h-10 w-10" />
+              <AvatarFallback className="text-3xl font-bold flex items-center justify-center">
+                {avatarEmoji}
               </AvatarFallback>
             )}
           </Avatar>

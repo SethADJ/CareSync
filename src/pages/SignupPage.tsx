@@ -131,9 +131,16 @@ export default function SignupPage() {
       localStorage.setItem(USER_KEY, JSON.stringify(storedProfile));
       localStorage.setItem('caresync_username', username.trim());
       localStorage.setItem('caresync_password', password);
-      // Set default avatar
-      localStorage.setItem('caresync_avatar_icon', 'User');
-      localStorage.setItem('caresync_avatar_color', '#3B82F6');
+      // Store selected avatar
+      const selectedAvatarOption = AVATAR_OPTIONS.find(a => a.id === profile.avatarId);
+      if (selectedAvatarOption) {
+        localStorage.setItem('caresync_avatar_id', profile.avatarId);
+        localStorage.setItem('caresync_avatar_color', selectedAvatarOption.color);
+      } else {
+        const defaultAvatar = AVATAR_OPTIONS[0];
+        localStorage.setItem('caresync_avatar_id', defaultAvatar.id);
+        localStorage.setItem('caresync_avatar_color', defaultAvatar.color);
+      }
       localStorage.setItem('caresync_logged_in', 'true');
       // Link Gmail for Google Drive backup
       if (profile.email) {
