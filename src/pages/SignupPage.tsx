@@ -179,16 +179,7 @@ export default function SignupPage() {
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-full sm:max-w-lg"
         >
-          {/* Logo */}
           <div className="text-center mb-6">
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 120, damping: 15 }}
-              className="mx-auto mb-3"
-            >
-              <Logo className="h-16 w-16 mx-auto rounded-2xl shadow-lg shadow-primary/25" />
-            </motion.div>
             <h1 className="text-2xl font-bold text-foreground">
               Care<span className="text-primary">Sync</span>
             </h1>
